@@ -1,0 +1,22 @@
+name: infrafair-doc
+channels:
+- conda-forge
+dependencies:
+- python>=3.9
+- pip
+- python
+- six
+- numpy
+- pandas>=1.1.0
+- xarray
+- netcdf4
+- pytables
+- matplotlib
+- pandoc
+- linopy>=0.2
+
+- pip:
+  - .
+  - sphinx<6
+  - sphinx-book-theme
+
