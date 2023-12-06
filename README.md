@@ -84,7 +84,7 @@ Then, three parameters (directory folder, and configuration file) will be asked 
 
 **Remark**: at this step, only press enter for each input and InfraFair will be executed with the default parameters.
 
-After this, in a directory of your choice, make a copy of the [Simple example](<https://github.com/IIT-EnergySystemModels/InfraFair/tree/master/Examples/Simple_ex>) or [EU example](<https://github.com/IIT-EnergySystemModels/InfraFair/tree/master/Examples/EU_ex>) case to create a new 
+After this, in a directory of your choice, make a copy of the [Simple example](<https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/Examples/Simple_ex>) or [EU example](<https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/Examples/EU_ex>) case to create a new 
 case of your choice but using the current format of the .csv files.
 Proper execution of InfraFair.py can be made by introducing the new case and the directory of your choice. 
 
