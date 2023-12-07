@@ -25,15 +25,17 @@ setup(
     license='GNU AFFERO General Public License v3',
     long_description = "README.md",
     packages=['InfraFair'],
-    install_requires=['numpy',
+    install_requires=['numpy>=1.21.4',
                       'pandas>=1.3.4,<2.0.0',
-                      'matplotlib',                  
+                      'matplotlib>=3.5.0',
+                      'openpyxl>=3.0.0',
                       ],
     dependency_links=[
         "http://pandas.pydata.org/",
         "http://www.numpy.org/",
         "https://matplotlib.org/",
-    ],     
+    ],
+    python_requires= ">=3.8,<3.12",       
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
@@ -45,6 +47,5 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
     ],   
 )
