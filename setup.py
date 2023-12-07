@@ -26,7 +26,7 @@ setup(
     long_description = "README.md",
     packages=['InfraFair'],
     install_requires=['numpy',
-                      'pandas',
+                      'pandas>=1.3.4,<2.0.0',
                       'matplotlib',                  
                       ],
     dependency_links=[
