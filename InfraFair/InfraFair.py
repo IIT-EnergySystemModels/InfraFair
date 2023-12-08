@@ -525,7 +525,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
 
     #%% processing input data and basic results per snapshot
     for snapshot in range(1,n_snapshots+1):
-        output_file         = "Scenario " + str(snapshot) +" results\\"
+        output_file         = "Snapshot " + str(snapshot) +" results\\"
         output_file         = os.path.join(config_path, output_file)
         current_snapshot    = str(snapshot)
 
