@@ -17,9 +17,10 @@ employs the **Average Participations Method (APM)** that allocates the
 cost based on the electrical usage that each agent makes of each infrastructure asset as a reasonable proxy 
 to the benefits, the former obtained from the latter. The basic intuition behind the APM is that 
 energy consumed by demands and produced by generators, as well as the responsibility for causing energy 
-flows, can be assigned by employing simple heuristic rules that only use the actual pattern of flows in 
-the infrastructure network.
+flows, can be assigned by employing **a simple heuristic rule** that only uses the actual pattern of flows in 
+the infrastructure network. 
 
+The rule assumes that energy flows can be traced by supposing that at any network node, the inflows are distributed proportionally among the outflows. This is the so-called **proportionality rule**. Implicit in this rule is the assumption that energy does not flow in the opposite direction to that of the prevalent (net) flow over each asset, which, according to this assumption, is the only existing flow. Based on these assumptions, the method traces the flow of energy from individual sources to individual sinks in all the network assets.
 
 ## Scope
 InfraFair determines the network utilisation of agents, system operators and countries. 
@@ -35,7 +36,7 @@ power lines, transformers, breaks, series capacitors and phase shifting transfor
 
 
 ## Functionality
-When provided with hourly representative snapshots, InfraFair can calculate (per snapshot and overall annual weighted average):
+Inputs to the model must consist of the **map of flows** in each of the assets as well as the **injections and withdrawals** of energy at each node. Additionally, the **rating capacity and the capital cost** of each asset must be provided for the model to be able to allocate costs to network users. Other information, such as the voltage and the length of each asset, can be provided to produce optional categorised results. When provided with hourly representative snapshots of these inputs, InfraFair can calculate (per snapshot and overall annual weighted average):
 
 * Individual agent flow and cost contributions to each asset in the network.
 * Country flow and cost contributions to each asset in the network.
