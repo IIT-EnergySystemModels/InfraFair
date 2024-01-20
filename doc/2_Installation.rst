@@ -18,7 +18,11 @@ It is always helpful to use dedicated environment, such as the `virtual environm
 
 Installing InfraFair
 ===========================
-InfraFair package can be installed from its GitHub repository following these four steps:
+InfraFair can be easily installed with pip:
+
+      > pip install InfraFair 
+
+Alternatively, it can be installed from its GitHub repository following these four steps:
 
 1. Clone the InfraFair repository, which includes the folder structure and all necessary functions to run the model.
 2. Launch the command prompt (Windows: Win+R, type "cmd", Enter) or the Anaconda prompt.
