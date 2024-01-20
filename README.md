@@ -1,4 +1,5 @@
 ![image](doc/Images/InfraFair_Logo.png)
+[![PyPI version](https://img.shields.io/pypi/v/InfraFair.svg)](https://pypi.python.org/pypi/InfraFair)
 [![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/IIT-EnergySystemModels/InfraFair/blob/main/LICENSE)
 [![Documentation Status](https://readthedocs.org/projects/infrafair/badge/?version=latest)](https://infrafair.readthedocs.io/en/latest/?badge=latest)
 
@@ -52,7 +53,11 @@ Inputs to the model must consist of the **map of flows** in each of the assets a
 
 
 ## Installation
-InfraFair package can be installed from its GitHub repository following these four steps:
+InfraFair can be easily installed with pip:
+
+      > pip install InfraFair 
+
+Alternatively, it can be installed from its GitHub repository following these four steps:
 
 1. Clone the InfraFair repository, which includes the folder structure and all necessary functions to run the model.
 2. Launch the command prompt (Windows: Win+R, type "cmd", Enter) or the Anaconda prompt.
