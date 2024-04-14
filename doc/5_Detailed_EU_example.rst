@@ -28,8 +28,7 @@ To run the case, follow the following commands.
 6. The model will ask you for the (<config_file>) input, click Enter and leave it on the default value.
 
 .. Note::
-    The Assets attributes tab **must include all the lines without duplication**. If there is double circuit lines, the data
-    in the columns "Capacity" and "Cost" **must be the sum** of the two double circuit lines and **duplicated entree must be removed**.
+    The Assets attributes tab **must include all the lines in the flow tab, including duplications**.
 
 Once the model finishes execution, the figure below should be displayed in the command or Anaconda prompt.
 

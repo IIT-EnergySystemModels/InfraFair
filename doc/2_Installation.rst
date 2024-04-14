@@ -33,6 +33,10 @@ Alternatively, it can be installed from its GitHub repository following these fo
       
         > pip install . 
 
+An already installed model can be upgraded to the latest version with the following command:
+
+      > pip install --upgrade InfraFair 
+      
 
 Dependencies
 ============

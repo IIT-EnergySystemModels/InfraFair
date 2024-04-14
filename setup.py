@@ -26,7 +26,7 @@ setup(
     long_description = "README.md",
     packages=['InfraFair'],
     install_requires=['numpy>=1.21.4',
-                      'pandas>=1.3.4,<2.0.0',
+                      'pandas==1.3.4',
                       'matplotlib>=3.5.0',
                       'openpyxl>=3.0.0',
                       ],

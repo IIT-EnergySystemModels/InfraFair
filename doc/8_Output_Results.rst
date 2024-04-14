@@ -41,3 +41,9 @@ attributes input data. The cost responsibilities in the Control input variables 
 be allocated to the demand and generators. This percentage of the total cost is then allocated to the different demand and 
 generators proportional to their asset utilisation. 
 
+Losses results
+==============
+The losses results are calculated when data on the losses of each asset is provided in the flow input data. 
+The losses are allocated to agents using the same contribution factor of the flow. For instance, assuming that the losses in a line 
+that has 100 MW flow are 0.1 MW, if an agent is responsible for 40 MW flow on this line, it will be allocated 0.04 MW of the losses
+in this line.

@@ -25,6 +25,7 @@ Scope
 InfraFair determines the network utilisation of agents, system operators and countries. 
 Based on this utilisation and assuming that it reflects the economic benefits received by agents, 
 it determines the responsibility of each agent in the construction of each element in the network. 
+Additionally, it can also attribute losses on the assets to their responsible agents.
 In order to reasonably reflect agent utilisation of infrastructure, multiple representative snapshots 
 of annual network usage should be provided. InfraFair presents a decision support tool for tariff 
 design for regional power transmission infrastructure, but it can be used for national infrastructure 
@@ -38,17 +39,17 @@ Functionality
 =============
 Inputs to the model must consist of the **map of flows** in each of the assets as well as the **injections and withdrawals** of energy at each node. Additionally, the **rating capacity and the capital cost** of each asset must be provided for the model to be able to allocate costs to network users. Other information, such as the voltage and the length of each asset, can be provided to produce optional categorised results. When provided with hourly representative snapshots of these inputs, InfraFair can calculate (per snapshot and overall annual weighted average):
 
-* Individual agent flow and cost contributions to each asset in the network.
-* Country flow and cost contributions to each asset in the network.
+* Individual agent flows, losses and cost contributions to each asset in the network.
+* Country flows, losses and cost contributions to each asset in the network.
 * Individual agent and country utilisation of each asset in the network.
-* Individual Agent flow and cost contributions to similar aggregated assets.
-* Country flow and cost contributions to similar aggregated assets. 
+* Individual Agent flows, losses and cost contributions to similar aggregated assets.
+* Country flows, losses and cost contributions to similar aggregated assets. 
 * Individual agent and country utilisation of similar aggregated assets.
 * Individual Agent total cost contribution to be paid.
 * Individual agent and country utilisation of the whole network.
-* Country flow and cost contributions made of the use of each other country.
+* Country flows, losses and cost contributions made of the use of each other country.
 * Country total flow and cost contributions made of the use of the rest of the network.
-* Country flow and cost incurred from the use made by the rest of the countries.
+* Country flows, losses and cost incurred from the use made by the rest of the countries.
 
 
 Target user group
