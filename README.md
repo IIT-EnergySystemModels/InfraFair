@@ -1,7 +1,9 @@
 ![image](doc/Images/InfraFair_Logo.png)
-[![PyPI version](https://img.shields.io/pypi/v/InfraFair.svg)](https://pypi.python.org/pypi/InfraFair)
+[![Versions](https://img.shields.io/pypi/pyversions/InfraFair.svg)](https://pypi.org/project/InfraFair)
+[![PyPI](https://badge.fury.io/py/InfraFair.svg)](https://badge.fury.io/py/InfraFair)
 [![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://github.com/IIT-EnergySystemModels/InfraFair/blob/main/LICENSE)
 [![Documentation Status](https://readthedocs.org/projects/infrafair/badge/?version=latest)](https://infrafair.readthedocs.io/en/latest/?badge=latest)
+[![PePy](https://static.pepy.tech/badge/InfraFair)](https://www.pepy.tech/projects/InfraFair)
 
 # InfraFair
 *"Fairness in allocating infrastructure cost"*   
