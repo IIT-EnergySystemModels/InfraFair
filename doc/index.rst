@@ -13,7 +13,7 @@
 *"Fairness in allocating infrastructure cost"*
 
 **InfraFair** is an open-source modelling tool for infrastructure cost allocation that can be used for any 
-flow-based energy infrastructure, such as the electricity, gas and hydrogen infrastructure. 
+flow-based energy infrastructure, such as the electricity, gas, heat and hydrogen infrastructure. 
 
 The tool has been developed at the `Instituto de Investigación Tecnológica (IIT) 
 <https://www.iit.comillas.edu/index.php.en>`_ of the `Universidad Pontificia Comillas <https://www.comillas.edu/en/>`_.
