@@ -1,17 +1,21 @@
 .. InfraFair documentation master file, created by Mohamed A.Eltahir Elabbas
 
 ##########################################
- EU Example
+ The EU Regional Electricity Network
 ##########################################
 
 .. Note::
     You can `download <https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/Examples/EU_ex>`_ the data used in this example.
 
 The network presented in this example represents an old snapshot of the European transmission network that includes 
-eighteen countries, 3383 nodes and 5681 transmission lines. The data included in this example is meant for 
-demonstration purposes and is by no means an accurate representation of the network. All the data included in the Assets attributes 
-tab is artificial, and the cost figures are made up figures for testing purposes only. 
+eighteen countries, 3383 nodes and 5681 transmission lines. A single operational snapshot is used in this example to trace the flow.
 
+Note that the data included in this example is meant for demonstration purposes and is by no means an accurate representation of the 
+network. All the data included in the Assets attributes tab is artificial, and the cost figures are made up figures for testing purposes 
+only. 
+
+Running the Example
+===================
 To run the case, follow the following commands.
 
 1. Launch the command prompt (Windows: Win+R, type "cmd", Enter) or the Anaconda prompt.
@@ -32,11 +36,12 @@ To run the case, follow the following commands.
 
 Once the model finishes execution, the figure below should be displayed in the command or Anaconda prompt.
 
-.. image:: Images/EU_example_execution.png
+.. image:: Images/Execution.png
    :scale: 100%
    :align: center
 
-
+Results
+=======
 The following table shows the cost allocated to countries' generators (columns) based on their use of other countries' assets (raws).
 The diagonal costs reflect the cost that a country has to pay itself according to the use of its own generators. 
 The raw "Cost to receive" indicates per country the total cost it should receive due to other countries' generators using
@@ -44,6 +49,7 @@ its assets (which is the sum of the country's raw minus the cost it should pay i
 The raw "Cost to pay" indicates per country the total cost it should pay due to the use its generators are making of other 
 countries' assets (which is the sum of the country's column minus the cost it should pay itself).
 
+**Demand results**
  ==================== ======== ======== ======== ======== ======= ======== ======== ======= ======= ====== ======= ======= ======== ====== ======= ======= ======= ======= 
  **Country**           ZB       ZG       ZI       DB       DD       DE      DF       DI       DJ      EA      EB     EC      ED      EF       EG     EH      EI      FF     
  -------------------- -------- -------- -------- -------- ------- -------- -------- ------- ------- ------ ------- ------- -------- ------ ------- ------- ------- -------
@@ -75,6 +81,7 @@ countries' assets (which is the sum of the country's column minus the cost it sh
 
 Similarly, the following table shows the cost allocated to the countries' generators (columns) based on their use of other countries' assets (raws).
 
+**Generation results**
  ===================== ======== ======= ======== ======== ======= ======== ======= ======= ======= ====== ======= ====== ======== ====== ====== ======= ======= =====
  **Country**            ZB       ZG       ZI      DB       DD       DE      DF       DI      DJ      EA      EB     EC      ED     EF       EG     EH     EI      FF     
  --------------------- -------- ------- -------- -------- ------- -------- ------- ------- ------- ------ ------- ------ -------- ------ ------ ------- ------- -----
@@ -103,3 +110,14 @@ Similarly, the following table shows the cost allocated to the countries' genera
  --------------------- -------- ------- -------- -------- ------- -------- ------- ------- ------- ------ ------- ------ -------- ------ ------ ------- ------- -----
  **Net compensation**   -2937    737     15553    -25100   12543   -7478    4563    -1913   -8330   -687   9939    611    2281     417    -321   -2727   2213    637  
  ===================== ======== ======= ======== ======== ======= ======== ======= ======= ======= ====== ======= ====== ======== ====== ====== ======= ======= ===== 
+
+The figures below were created from the raw results above using Flourish data visualization. They show the ranking of countries based on 
+both their use of other countries' network and the use that other countries make of their network. 
+
+.. image:: Images/EU_Electricity_Network_D.png
+   :scale: 50%
+   :align: center
+
+.. image:: Images/EU_Electricity_Network_G.png
+   :scale: 50%
+   :align: center

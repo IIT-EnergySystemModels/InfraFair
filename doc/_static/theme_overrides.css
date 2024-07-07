@@ -60,10 +60,12 @@
         white-space: normal !important;
         background: rgb(250, 250, 250) !important;
     }
+
     .wy-table-responsive {
         max-width: 100%;
         overflow: visible !important;
     }
+
     .wy-nav-content {
         max-width: 910px !important;
     }

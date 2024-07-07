@@ -40,16 +40,18 @@ Documentation
 
 **Examples**
 
-* :doc:`4_Simple_6C_example`
-* :doc:`5_Detailed_EU_example`
+* :doc:`13_Electricity_Networks`
+* :doc:`15_Gas_Networks`
+* :doc:`14_Heat_Networks`
 
 .. toctree::
    :hidden:
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Examples
 
-   4_Simple_6C_example
-   5_Detailed_EU_example
+   13_Electricity_Networks
+   15_Gas_Networks
+   14_Heat_Networks
 
 
 **Model Details**
