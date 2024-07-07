@@ -46,7 +46,7 @@ Once the model finishes execution, the figure below should be displayed in the c
 
 Results
 =======
-The two figures below show the total gas flow created by each country in each pipeline. The first figure shows the gas flow created 
+The two figures below (obtained from the raw results using Flourish data visualization) show the total gas flow created by each country in each pipeline. The first figure shows the gas flow created 
 by countries' demand (importing countries) while the second figure shows the gas flow created by countries' generation (exporting 
 countries). 
 
@@ -58,8 +58,9 @@ countries).
    :scale: 50%
    :align: center
 
-The following figures show the geographical map of the countries and their network usage by other countries. The first figure shows for each 
-country a pie chart showing the usage of that country's network by the demand of other countries, including its own demand. 
+The following figures were created from the raw results of the model using QGIS software to show the geographical map of the countries 
+and their network usage by other countries. The first figure shows for each country a pie chart showing the usage of that country's 
+network by the demand of other countries, including its own demand. 
 
 .. image:: Images/EU_Gas_D.png
    :scale: 5%
