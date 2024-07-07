@@ -5,7 +5,7 @@
 ####################################
 
 .. Note::
-    You can `download <https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/Examples/Eu_Gas_ex>`_ the data used in this example.
+    You can `download <https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/Examples/EU_Gas_ex>`_ the data used in this example.
 
 The network presented in this example represents the European Regional Gas Network, which includes fifty-two countries in continental Europe
 , four other countries, and Liquefied Natural Gas (LNG) terminals; each of which is represented by a single node, for a total of 57 nodes, 
