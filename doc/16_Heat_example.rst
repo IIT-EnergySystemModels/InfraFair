@@ -8,7 +8,7 @@
     You can `download <https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/Examples/Simple_Heat_ex>`_ the data used in this example.
 
 The network presented in this example represents the South-Holland District Heating Network (DHN) that connects the cities of Rotterdam, Den Haag,   
-and the region of Lansingerland (B-triangle). It is operated by Enceo and connects buildings (households, companies) to the waste heat of 
+and the region of Lansingerland (B-triangle). It is operated by Eneco and connects buildings (households, companies) to the waste heat of 
 the Port of Rotterdam, waste incineration plants, steam and gas turbines, and heat buffers that function as heat storage. Some of the gas 
 pipelines are bidirectional (with two arrows), while the majority are unidirectional, as shown in the Figure below.
 
@@ -56,10 +56,10 @@ by the network users.
 
 **Demand results**
  ================================ =========== =========== ============= 
- **Area**                         Rotterdam   The Hauge   Lansingerland   
+ **Area**                         Rotterdam   The Hague   Lansingerland   
  -------------------------------- ----------- ----------- -------------
   Rotterdam Network               750.91      8.48        102.22                 
-  The Hauge Network               5           159.88      0.26                   
+  The Hague Network               5           159.88      0.26                   
   Lansingerland Network           38.45       0           173.9                  
  -------------------------------- ----------- ----------- -------------
  **Flow Created by Other Demand** 110.7       5.26        38.45                  
@@ -71,10 +71,10 @@ by the network users.
 
 **Generation results**
  ==================================== =========== =========== ============= 
- **Area**                             Rotterdam   The Hauge   Lansingerland   
+ **Area**                             Rotterdam   The Hague   Lansingerland   
  ------------------------------------ ----------- ----------- -------------
   Rotterdam Network                   861.06      0           0                 
-  The Hauge Network                   47.65       81.89       0                   
+  The Hague Network                   47.65       81.89       0                   
   Lansingerland Network               149.73      0           62.53                  
  ------------------------------------ ----------- ----------- -------------
  **Flow Created by Other generators** 0           47.65       149.73                  
@@ -87,21 +87,21 @@ by the network users.
 The figures below (obtained from the raw snapshot data using Flourish data visualization) illustrate the hourly network 
 utilisation of each area hy demand and generators.
 
-.. image:: Images/The_Hauge_network.png
-   :scale: 28%
+.. image:: Images/The_Hague_network.png
+   :scale: 26%
    :align: center
 
 .. image:: Images/Lansingerland_network.png
-   :scale: 28%
+   :scale: 26%
    :align: center
 
 .. image:: Images/Rotterdam_network.png
-   :scale: 28%
+   :scale: 26%
    :align: center
 
 It should be noted that while the demand of Rotterdam is expected to be fully supplied by its own generation 
 (since the network of Rotterdam is fully used by its own generators) and does not make use of any other area 
-network, the figures show that it makes slight use of the Hauge network and considerable use of LansingerLand 
+network, the figures show that it makes slight use of the Hague network and considerable use of LansingerLand 
 network. This is due to the fact that there is storage in Rotterdam that is treated as demand with negative 
 production in hours of discharging and, hence, acts as a generator. This can be easily verified by inspecting 
 the disaggregated results of individual agents and negative demand.
