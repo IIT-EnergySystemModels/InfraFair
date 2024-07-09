@@ -7,7 +7,7 @@
 .. Note::
     You can `download <https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/Examples/Simple_Heat_ex>`_ the data used in this example.
 
-The network presented in this example represents the South-Holland District Heating Network (DHN) that connects the cities of Rotterdam, Den Haag,   
+The network presented in this example represents the South-Holland District Heating Network (DHN) that connects the cities of Rotterdam, The Hague,   
 and the region of Lansingerland (B-triangle). It is operated by Eneco and connects buildings (households, companies) to the waste heat of 
 the Port of Rotterdam, waste incineration plants, steam and gas turbines, and heat buffers that function as heat storage. Some of the gas 
 pipelines are bidirectional (with two arrows), while the majority are unidirectional, as shown in the Figure below.
@@ -85,7 +85,7 @@ by the network users.
  ==================================== =========== =========== ============= 
 
 The figures below (obtained from the raw snapshot data using Flourish data visualization) illustrate the hourly network 
-utilisation of each area hy demand and generators.
+utilisation of each area by demand and generators.
 
 .. image:: Images/The_Hague_network.png
    :scale: 26%
