@@ -4,7 +4,7 @@
  Output Results
 ##########################################
 
-The output of InfraFair is a series of .csv files. The name of each file name indicates the type 
+The output of InfraFair is a series of .csv files. The name of each file indicates the type 
 of results it contains. The general format of the names is **X Y contribution per Z**, X being 
 the type of user or a group of users, Y being the type of contribution it makes, and Z being the 
 asset or a group of assets. The figure below shows the different combinations of the three elements.  

@@ -42,7 +42,7 @@ Once the model finishes execution, the figure below should be displayed in the c
 
 Results
 =======
-The following table shows the cost allocated to countries' generators (columns) based on their use of other countries' assets (raws).
+The following table shows the cost allocated to countries' generators (columns) based on their use of other countries' assets (rows).
 The diagonal costs reflect the cost that a country has to pay itself according to the use of its own generators. 
 The raw "Cost to receive" indicates per country the total cost it should receive due to other countries' generators using
 its assets (which is the sum of the country's raw minus the cost it should pay itself).
@@ -79,7 +79,7 @@ countries' assets (which is the sum of the country's column minus the cost it sh
  **Net compensation**  25698    -22099   -50816   33448    -4838   37804    -34488   248     25525   1477   -6165   -7829   3068     1518   -3647   1254    1131    -1288  
  ==================== ======== ======== ======== ======== ======= ======== ======== ======= ======= ====== ======= ======= ======== ====== ======= ======= ======= ======= 
 
-Similarly, the following table shows the cost allocated to the countries' generators (columns) based on their use of other countries' assets (raws).
+Similarly, the following table shows the cost allocated to the countries' generators (columns) based on their use of other countries' assets (rows).
 
 **Generation results**
  ===================== ======== ======= ======== ======== ======= ======== ======= ======= ======= ====== ======= ====== ======== ====== ====== ======= ======= =====
