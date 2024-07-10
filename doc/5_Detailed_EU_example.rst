@@ -49,7 +49,7 @@ its assets (which is the sum of the country's raw minus the cost it should pay i
 The raw "Cost to pay" indicates per country the total cost it should pay due to the use its generators are making of other 
 countries' assets (which is the sum of the country's column minus the cost it should pay itself).
 
-**Demand results**
+**Generation results**
  ==================== ======== ======== ======== ======== ======= ======== ======== ======= ======= ====== ======= ======= ======== ====== ======= ======= ======= ======= 
  **Country**           ZB       ZG       ZI       DB       DD       DE      DF       DI       DJ      EA      EB     EC      ED      EF       EG     EH      EI      FF     
  -------------------- -------- -------- -------- -------- ------- -------- -------- ------- ------- ------ ------- ------- -------- ------ ------- ------- ------- -------
@@ -79,9 +79,9 @@ countries' assets (which is the sum of the country's column minus the cost it sh
  **Net compensation**  25698    -22099   -50816   33448    -4838   37804    -34488   248     25525   1477   -6165   -7829   3068     1518   -3647   1254    1131    -1288  
  ==================== ======== ======== ======== ======== ======= ======== ======== ======= ======= ====== ======= ======= ======== ====== ======= ======= ======= ======= 
 
-Similarly, the following table shows the cost allocated to the countries' generators (columns) based on their use of other countries' assets (rows).
+Similarly, the following table shows the cost allocated to the countries' demand (columns) based on their use of other countries' assets (rows).
 
-**Generation results**
+**Demand results**
  ===================== ======== ======= ======== ======== ======= ======== ======= ======= ======= ====== ======= ====== ======== ====== ====== ======= ======= =====
  **Country**            ZB       ZG       ZI      DB       DD       DE      DF       DI      DJ      EA      EB     EC      ED     EF       EG     EH     EI      FF     
  --------------------- -------- ------- -------- -------- ------- -------- ------- ------- ------- ------ ------- ------ -------- ------ ------ ------- ------- -----
