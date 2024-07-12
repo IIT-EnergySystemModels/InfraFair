@@ -44,9 +44,9 @@ Results
 =======
 The following table shows the cost allocated to countries' generators (columns) based on their use of other countries' assets (rows).
 The diagonal costs reflect the cost that a country has to pay itself according to the use of its own generators. 
-The raw "Cost to receive" indicates per country the total cost it should receive due to other countries' generators using
-its assets (which is the sum of the country's raw minus the cost it should pay itself).
-The raw "Cost to pay" indicates per country the total cost it should pay due to the use its generators are making of other 
+The row "Cost to receive" indicates per country the total cost it should receive due to other countries' generators using
+its assets (which is the sum of the country's row minus the cost it should pay itself).
+The row "Cost to pay" indicates per country the total cost it should pay due to the use its generators are making of other 
 countries' assets (which is the sum of the country's column minus the cost it should pay itself).
 
 **Generation results**
@@ -111,7 +111,7 @@ Similarly, the following table shows the cost allocated to the countries' demand
  **Net compensation**   -2937    737     15553    -25100   12543   -7478    4563    -1913   -8330   -687   9939    611    2281     417    -321   -2727   2213    637  
  ===================== ======== ======= ======== ======== ======= ======== ======= ======= ======= ====== ======= ====== ======== ====== ====== ======= ======= ===== 
 
-The figures below were created from the raw results above using Flourish data visualization. They show the ranking of countries based on 
+The figures below were created from the row results above using Flourish data visualization. They show the ranking of countries based on 
 both their use of other countries' network and the use that other countries make of their network. 
 
 .. image:: Images/EU_Electricity_Network_D.png
