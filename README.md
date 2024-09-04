@@ -124,4 +124,4 @@ InfraFair is licensed under the open source [AGPL-3.0 license](https://github.co
 
 
 ## Execution
-![image](doc/Images/InfraFair_execution.png)
+![image](doc/Images/Execution.png)
