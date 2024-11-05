@@ -472,7 +472,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     length_per_reactance            = control_inputs.loc["Length per Reactance (PU)"][0]                            # integer
     asset_types                     = control_inputs.loc["Asset Types"][0].split(",")                               # list
     n_snapshots                     = control_inputs.loc["Number of Snapshots"][0]                                  # integer
-    snapshots_weights               = control_inputs.loc["Snapshots Weights"][0].split(",")                         # list with length equals n_snapshots
+    snapshots_weights               = control_inputs.loc["Snapshots Weights"][0]                                    # list with length equals n_snapshots
     voltage_threshold               = control_inputs.loc["Voltage Threshold (kV)"][0]                               # Float
     cost_assignment_op              = control_inputs.loc["Cost Allocation Option"][0]                               # integer equals 1 or 2 or 3 or 4                     
     utilization_threshold           = control_inputs.loc["Utilization Threshold (%)"][0]                            # percentage 0-100, only if cost_assignment_op equals 4 
@@ -508,8 +508,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     try:
         regional_cost               = control_inputs.loc["Cost of regional assets"][0]                              # float
     except KeyError:
-        regional_cost               =  0
-        
+        regional_cost               =  0        
 
     # initializing control variables
     remove_zero_values  = id_col            = Reactance_process = False                                             # internal setting to input variable to remove the zero value from the results 
@@ -517,8 +516,12 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     ownership_processing                    = True
     SO_aggregation = category_aggregation   = asset_type_cost   = False
     asset_type_dic                          = {int(asset_types[i].split(":")[1]):asset_types[i].split(":")[0] for i in range(len(asset_types))} 
-    snapshots_weights_dic                   = {int(snapshots_weights[i].split(":")[0]):int(snapshots_weights[i].split(":")[1]) for i in range(len(snapshots_weights))} 
-    
+    if snapshots_weights == "Equal" or snapshots_weights == "equal" or snapshots_weights == "EQUAL":
+        snapshots_weights_dic               = {i:1 for i in range(1,n_snapshots+1)}
+    else:
+        snapshots_weights                   = snapshots_weights.split(",")
+        snapshots_weights_dic               = {int(snapshots_weights[i].split(":")[0]):int(snapshots_weights[i].split(":")[1]) for i in range(len(snapshots_weights))} 
+
     # checking the optional provided attributes
     attributes_provided = lines_attributes.columns
     if "Length" in attributes_provided and show_intermediary_results:
