@@ -17,7 +17,7 @@ print(logo)
 
 setup(
     name='InfraFair',
-    version='1.0.0',    
+    version='1.2.0',    
     description='A modelling tool for infrastructure cost allocation',
     url='https://github.com/IIT-EnergySystemModels/InfraFair',
     author='Mohamed A.Eltahir Elabbas',
@@ -28,14 +28,14 @@ setup(
     install_requires=['numpy>=1.21.4',
                       'pandas==1.3.4',
                       'matplotlib>=3.5.0',
-                      'openpyxl>=3.0.0',
+                      'openpyxl>=3.0.0',                  
                       ],
     dependency_links=[
         "http://pandas.pydata.org/",
         "http://www.numpy.org/",
         "https://matplotlib.org/",
     ],
-    python_requires= ">=3.8,<3.12",       
+    python_requires= ">=3.8,<3.12",     
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
