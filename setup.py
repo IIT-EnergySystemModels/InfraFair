@@ -35,7 +35,7 @@ setup(
         "http://www.numpy.org/",
         "https://matplotlib.org/",
     ],
-    python_requires= ">=3.8,<3.12",     
+    python_requires= ">=3.8,<3.10",     
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
@@ -45,7 +45,5 @@ setup(
         'Natural Language :: English',        
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
     ],   
 )

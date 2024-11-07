@@ -2,7 +2,7 @@ name: infrafair-doc
 channels:
 - conda-forge
 dependencies:
-- python>=3.8,<3.12
+- python>=3.8,<3.10
 - pip
 - python
 - six
