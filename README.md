@@ -118,10 +118,16 @@ We strongly welcome anyone interested in contributing to this project.
 
 
 ## License
-Copyright 2023 [Universidad Pontificia Comillas](https://www.comillas.edu/en/)
+Copyright 2023 [Universidad Pontificia Comillas](https://www.comillas.edu/en/).
 
 InfraFair is licensed under the open source [AGPL-3.0 license](https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/LICENSE).
 
 
 ## Execution
 ![image](doc/Images/Execution.png)
+
+
+## Reference
+Mohamed A. Eltahir Elabbas, Luis Olmos Camacho, Ignacio Pérez-Arriaga, *[InfraFair: Infrastructure cost allocation](<https://www.sciencedirect.com/science/article/pii/S2352711025000366>)*, 2025, [SoftwareX](<https://www.sciencedirect.com/journal/softwarex>), Vol. 29, pp. 102069-1 - 102069-9, [DOI:10.1016/j.softx.2025.102069](<https://doi.org/10.1016/j.softx.2025.102069>).
+
+InfraFair [presentation](<https://github.com/IIT-EnergySystemModels/InfraFair/tree/main/doc/Presentation/InfraFair_Introduction.pdf>).

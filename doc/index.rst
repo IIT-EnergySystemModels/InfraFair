@@ -76,6 +76,7 @@ Documentation
 * :doc:`9_Release_Notes`
 * :doc:`10_Contributing`
 * :doc:`11_Research_projects`
+* :doc:`19_Citation`
 * :doc:`12_Contact_Us`
 
 .. toctree::
@@ -86,4 +87,5 @@ Documentation
    9_Release_Notes
    10_Contributing
    11_Research_projects
+   19_Citation
    12_Contact_Us
