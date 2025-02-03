@@ -4,6 +4,8 @@
 
 # Required
 version: 2
+sphinx:
+  configuration: doc/conf.py
 
 # Set the OS, Python version and other tools you might need
 build:
