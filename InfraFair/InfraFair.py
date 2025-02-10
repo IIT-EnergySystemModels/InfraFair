@@ -826,6 +826,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     if show_aggregated_results:
                         gen_country_losses_allocation_per_country, countries_lines  = get_contribution_per_group(gen_country_losses_allocation_per_asset, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
                         dem_country_losses_allocation_per_country, countries_lines  = get_contribution_per_group(dem_country_losses_allocation_per_asset, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
+                        country_losses_allocation_per_country                       = dem_country_losses_allocation_per_country + gen_country_losses_allocation_per_country
                         if category_aggregation:
                             gen_country_losses_allocation_per_asset_category        = get_aggregation_per_category(gen_country_losses_allocation_per_asset, lines_attributes)
                             dem_country_losses_allocation_per_asset_category        = get_aggregation_per_category(dem_country_losses_allocation_per_asset, lines_attributes)
@@ -836,6 +837,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     if show_aggregated_results:
                         gen_SO_losses_allocation_per_SO,   SOs_lines        = get_contribution_per_group(gen_SO_losses_allocation_per_asset, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
                         dem_SO_losses_allocation_per_SO,   SOs_lines        = get_contribution_per_group(dem_SO_losses_allocation_per_asset, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
+                        SO_losses_allocation_per_SO                         = dem_SO_losses_allocation_per_SO + gen_SO_losses_allocation_per_SO
                         if category_aggregation:
                             gen_SO_losses_allocation_per_asset_category     = get_aggregation_per_category(gen_SO_losses_allocation_per_asset, lines_attributes)
                             dem_SO_losses_allocation_per_asset_category     = get_aggregation_per_category(dem_SO_losses_allocation_per_asset, lines_attributes)
@@ -862,6 +864,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         if show_aggregated_results:
                             gen_country_losses_allocation_cost_per_country  = gen_country_losses_allocation_per_country*losses_price*snapshots_weights_dic[snapshot]*0.001
                             dem_country_losses_allocation_cost_per_country  = dem_country_losses_allocation_per_country*losses_price*snapshots_weights_dic[snapshot]*0.001
+                            country_losses_allocation_cost_per_country      = dem_country_losses_allocation_cost_per_country + gen_country_losses_allocation_cost_per_country
                             if category_aggregation:
                                 gen_country_losses_allocation_cost_per_asset_category    = gen_country_losses_allocation_per_asset_category*losses_price*snapshots_weights_dic[snapshot]*0.001
                                 dem_country_losses_allocation_cost_per_asset_category    = dem_country_losses_allocation_per_asset_category*losses_price*snapshots_weights_dic[snapshot]*0.001
@@ -872,6 +875,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         if show_aggregated_results:
                             gen_SO_losses_allocation_cost_per_SO = gen_SO_losses_allocation_per_SO*losses_price*snapshots_weights_dic[snapshot]*0.001
                             dem_SO_losses_allocation_cost_per_SO = dem_SO_losses_allocation_per_SO*losses_price*snapshots_weights_dic[snapshot]*0.001
+                            SO_losses_allocation_cost_per_SO     = dem_SO_losses_allocation_cost_per_SO + gen_SO_losses_allocation_cost_per_SO
                             if category_aggregation:
                                 gen_SO_losses_allocation_cost_per_asset_category = gen_SO_losses_allocation_per_asset_category*losses_price*snapshots_weights_dic[snapshot]*0.001
                                 dem_SO_losses_allocation_cost_per_asset_category = dem_SO_losses_allocation_per_asset_category*losses_price*snapshots_weights_dic[snapshot]*0.001
@@ -1134,6 +1138,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     if show_aggregated_results:
                         remove_zero_rows_and_columns(gen_country_losses_allocation_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation losses allocation per country sn_"+current_snapshot+".csv")
                         remove_zero_rows_and_columns(dem_country_losses_allocation_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand losses allocation per country sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(country_losses_allocation_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country joint losses allocation per country sn_"+current_snapshot+".csv")
                         if category_aggregation:
                             remove_zero_rows_and_columns(gen_country_losses_allocation_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation losses allocation per asset category sn_"+current_snapshot+".csv")
                             remove_zero_rows_and_columns(dem_country_losses_allocation_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand losses allocation per asset category sn_"+current_snapshot+".csv")
@@ -1144,6 +1149,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     if show_aggregated_results:
                         remove_zero_rows_and_columns(gen_SO_losses_allocation_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation losses allocation per SO sn_"+current_snapshot+".csv")
                         remove_zero_rows_and_columns(dem_SO_losses_allocation_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand losses allocation per SO sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(SO_losses_allocation_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO joint losses allocation per SO sn_"+current_snapshot+".csv")
                         if category_aggregation:
                             remove_zero_rows_and_columns(gen_SO_losses_allocation_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation losses allocation per asset category sn_"+current_snapshot+".csv")
                             remove_zero_rows_and_columns(dem_SO_losses_allocation_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand losses allocation per asset category sn_"+current_snapshot+".csv")
@@ -1170,6 +1176,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         if show_aggregated_results:
                             remove_zero_rows_and_columns(gen_country_losses_allocation_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation losses allocation cost per country sn_"+current_snapshot+".csv")
                             remove_zero_rows_and_columns(dem_country_losses_allocation_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand losses allocation cost per country sn_"+current_snapshot+".csv")
+                            remove_zero_rows_and_columns(country_losses_allocation_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country joint losses allocation cost per country sn_"+current_snapshot+".csv")
                             if category_aggregation:
                                 remove_zero_rows_and_columns(gen_country_losses_allocation_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation losses allocation cost per asset category sn_"+current_snapshot+".csv")
                                 remove_zero_rows_and_columns(dem_country_losses_allocation_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand losses allocation cost per asset category sn_"+current_snapshot+".csv")
@@ -1180,6 +1187,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         if show_aggregated_results:
                             remove_zero_rows_and_columns(gen_SO_losses_allocation_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation losses allocation cost per SO sn_"+current_snapshot+".csv")
                             remove_zero_rows_and_columns(dem_SO_losses_allocation_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand losses allocation cost per SO sn_"+current_snapshot+".csv")
+                            remove_zero_rows_and_columns(SO_losses_allocation_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO joint losses allocation cost per SO sn_"+current_snapshot+".csv")
                             if category_aggregation:
                                 remove_zero_rows_and_columns(gen_SO_losses_allocation_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation losses allocation cost per asset category sn_"+current_snapshot+".csv")
                                 remove_zero_rows_and_columns(dem_SO_losses_allocation_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand losses allocation cost per asset category sn_"+current_snapshot+".csv")
@@ -1473,6 +1481,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             if show_aggregated_results:
                 gen_country_losses_allocation_per_country_overall, countries_lines  = get_contribution_per_group(gen_country_losses_allocation_per_asset_overall, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
                 dem_country_losses_allocation_per_country_overall, countries_lines  = get_contribution_per_group(dem_country_losses_allocation_per_asset_overall, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
+                country_losses_allocation_per_country_overall                       = dem_country_losses_allocation_per_country_overall + gen_country_losses_allocation_per_country_overall
                 if category_aggregation:
                     gen_country_losses_allocation_per_asset_category_overall        = get_aggregation_per_category(gen_country_losses_allocation_per_asset_overall, lines_attributes)
                     dem_country_losses_allocation_per_asset_category_overall        = get_aggregation_per_category(dem_country_losses_allocation_per_asset_overall, lines_attributes)
@@ -1483,6 +1492,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             if show_aggregated_results:
                 gen_SO_losses_allocation_per_SO_overall,   SOs_lines        = get_contribution_per_group(gen_SO_losses_allocation_per_asset_overall, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
                 dem_SO_losses_allocation_per_SO_overall,   SOs_lines        = get_contribution_per_group(dem_SO_losses_allocation_per_asset_overall, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
+                SO_losses_allocation_per_SO_overall                         = dem_SO_losses_allocation_per_SO_overall + gen_SO_losses_allocation_per_SO_overall
                 if category_aggregation:
                     gen_SO_losses_allocation_per_asset_category_overall     = get_aggregation_per_category(gen_SO_losses_allocation_per_asset_overall, lines_attributes)
                     dem_SO_losses_allocation_per_asset_category_overall     = get_aggregation_per_category(dem_SO_losses_allocation_per_asset_overall, lines_attributes)
@@ -1509,6 +1519,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 if show_aggregated_results:
                     gen_country_losses_allocation_cost_per_country_overall   = gen_country_losses_allocation_per_country_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
                     dem_country_losses_allocation_cost_per_country_overall   = dem_country_losses_allocation_per_country_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                    country_losses_allocation_cost_per_country_overall       = dem_country_losses_allocation_cost_per_country_overall + gen_country_losses_allocation_cost_per_country_overall
                     if category_aggregation:
                         gen_country_losses_allocation_cost_per_asset_category_overall    = gen_country_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
                         dem_country_losses_allocation_cost_per_asset_category_overall    = dem_country_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
@@ -1519,6 +1530,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 if show_aggregated_results:
                     gen_SO_losses_allocation_cost_per_SO_overall = gen_SO_losses_allocation_per_SO_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
                     dem_SO_losses_allocation_cost_per_SO_overall = dem_SO_losses_allocation_per_SO_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                    SO_losses_allocation_cost_per_SO_overall     = dem_SO_losses_allocation_cost_per_SO_overall + gen_SO_losses_allocation_cost_per_SO_overall
                     if category_aggregation:
                         gen_SO_losses_allocation_cost_per_asset_category_overall = gen_SO_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
                         dem_SO_losses_allocation_cost_per_asset_category_overall = dem_SO_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
@@ -1644,6 +1656,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             if show_aggregated_results:
                 remove_zero_rows_and_columns(gen_country_losses_allocation_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall losses allocation per country.csv")
                 remove_zero_rows_and_columns(dem_country_losses_allocation_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall losses allocation per country.csv")
+                remove_zero_rows_and_columns(country_losses_allocation_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country joint overall losses allocation per country.csv")
                 if category_aggregation:
                     remove_zero_rows_and_columns(gen_country_losses_allocation_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall losses allocation per asset category.csv")
                     remove_zero_rows_and_columns(dem_country_losses_allocation_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall losses allocation per asset category.csv")
@@ -1654,6 +1667,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             if show_aggregated_results:
                 remove_zero_rows_and_columns(gen_SO_losses_allocation_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall losses allocation per SO.csv")
                 remove_zero_rows_and_columns(dem_SO_losses_allocation_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall losses allocation per SO.csv")
+                remove_zero_rows_and_columns(SO_losses_allocation_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO joint overall losses allocation per SO.csv")
                 if category_aggregation:
                     remove_zero_rows_and_columns(gen_SO_losses_allocation_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall losses allocation per asset category.csv")
                     remove_zero_rows_and_columns(dem_SO_losses_allocation_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall losses allocation per asset category.csv")
@@ -1680,6 +1694,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 if show_aggregated_results:
                     remove_zero_rows_and_columns(gen_country_losses_allocation_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall losses allocation cost per country.csv")
                     remove_zero_rows_and_columns(dem_country_losses_allocation_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall losses allocation cost per country.csv")
+                    remove_zero_rows_and_columns(country_losses_allocation_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country joint overall losses allocation cost per country.csv")
                     if category_aggregation:
                         remove_zero_rows_and_columns(gen_country_losses_allocation_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall losses allocation cost per asset category.csv")
                         remove_zero_rows_and_columns(dem_country_losses_allocation_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall losses allocation cost per asset category.csv")
@@ -1690,6 +1705,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 if show_aggregated_results:
                     remove_zero_rows_and_columns(gen_SO_losses_allocation_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall losses allocation cost per SO.csv")
                     remove_zero_rows_and_columns(dem_SO_losses_allocation_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall losses allocation cost per SO.csv")
+                    remove_zero_rows_and_columns(SO_losses_allocation_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO joint overall losses allocation cost per SO.csv")
                     if category_aggregation:
                         remove_zero_rows_and_columns(gen_SO_losses_allocation_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall losses allocation cost per asset category.csv")
                         remove_zero_rows_and_columns(dem_SO_losses_allocation_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall losses allocation cost per asset category.csv")
