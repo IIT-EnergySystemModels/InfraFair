@@ -13,7 +13,6 @@ C. de Sta. Cruz de Marcenado, 26
 28015 Madrid, Spain
 """
 
-from lib2to3.pgen2.pgen import NFAState
 from xml.sax.saxutils import prepare_input_source
 from matplotlib.collections import Collection
 from collections import Counter
@@ -26,6 +25,7 @@ import time
 from typing import Tuple  # For Python 3.8
 import argparse
 
+os.system('color')
 warnings.filterwarnings("ignore")
 
 #%% definitions
@@ -35,7 +35,7 @@ parser.add_argument('--dir',    type=str, default=None)
 parser.add_argument('--config', type=str, default=None)
 
 DIR     = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..'))
-CASE    = 'Examples\Simple_ex\Simple_Example'
+CASE    = 'Examples\\Simple_ex\\Simple_Example'
 CONFIGF = 'InfraFair control inputs'
 
 # Thanks to http://patorjk.com/software/taag/
@@ -93,7 +93,11 @@ def get_line_SOs(Line_name:str, attribute_DF: pd.DataFrame, nodes_DF: pd.DataFra
     node1, node2    = Line_name.split("-")
     node1, node2    =  int(node1), int(node2)
     SO1,  SO2       = "",""
-    L_Type          = attribute_DF["Type"][attribute_DF[attribute_DF.index == Line_name].index.values[0]]
+    if "Line" in attribute_DF.columns:
+        Temp_DF         = attribute_DF.set_index(["Line"])
+    else:
+        Temp_DF         = attribute_DF
+    L_Type          = Temp_DF["Type"][Temp_DF[Temp_DF.index == Line_name].index.values[0]]
     
     if "Three-winding Transformer" in attribute_dict:
         if attribute_dict[L_Type] == "Three-winding Transformer":     # check if it is 3 winding transformer
@@ -168,8 +172,8 @@ def get_negative_demand_contribution(negative_demand: np.ndarray, generation: np
         g_ser           = temp.xs(i) * g_ratio
         g_ser.name      = str(node) + "G"
 
-        ngd_contribution = ngd_contribution.append(ngd_ser)
-        ngd_contribution = ngd_contribution.append(g_ser)
+        ngd_contribution = pd.concat([ngd_contribution, pd.DataFrame(ngd_ser).transpose()])
+        ngd_contribution = pd.concat([ngd_contribution, pd.DataFrame(g_ser).transpose()])
 
     return ngd_contribution
 
@@ -226,22 +230,31 @@ def print_to_csv(name: str, matrix: np.ndarray, index: pd.Series, columns: pd.Se
     if total:
         Data_frame                  = Data_frame.transpose()
         last_row                    = Data_frame.sum(axis=1)
-        Data_frame["Total flow"]    = last_row
+        Data_frame["Total"]    = last_row
         Data_frame                  = Data_frame.transpose()
     if remove_zeros:
         # Remove rows where all values are zero
         Data_frame = Data_frame.loc[(Data_frame != 0).any(axis=1)]
         # Remove columns where all values are zero
         Data_frame = Data_frame.loc[:, (Data_frame != 0).any(axis=0)]
-    
+
     Data_frame.to_csv("%s.csv" % name)
+
+
+def exit_error(msg: str):
+    RED = "\033[31m"
+    RESET = "\033[0m"
+    print(f"{RED}ERROR{RESET}: {msg}", file=sys.stderr)
+    sys.exit(1)
 
 
 #%% primary functions
 
-def get_input_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, attribute_matrix: pd.DataFrame, attribute_dic:dict, SO_owner: bool = False, process_line_ownership: bool = False, reactance: bool = False) -> Tuple[np.ndarray, np.ndarray, list, np.ndarray, np.ndarray, np.ndarray, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def get_input_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, attribute_matrix: pd.DataFrame, attribute_dic:dict, index_name:str = 'Line', SO_owner:bool = False, process_line_ownership:bool = False, reactance:bool = False) -> Tuple[np.ndarray, np.ndarray, list, np.ndarray, np.ndarray, np.ndarray, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     "This function prepares the basic input matrices from the excel file and also returns interconnections between countries and owners of the lines"
-
+    
+    if index_name == "Line ID":
+        lines_matrix.set_index([index_name],inplace=True)
     gen                 = nodes_matrix["Generation"].to_numpy()[None].transpose()           # The generation matrix
     dem                 = nodes_matrix["Demand"].to_numpy()[None].transpose()               # The demand matrix
     phi                 = lines_matrix["Flow"].to_numpy()[None].transpose()                 # The flow matrix
@@ -273,11 +286,11 @@ def get_input_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, a
         ownership["Country 1"][index]   = country1
         ownership["Country 2"][index]   = country2
         if country1 != country2:
-            interconnections_C = interconnections_C.append({"Line": lines_matrix["Line"][index], "Country 1": country1, "Country 2": country2, "Flow": lines_matrix["Flow"][index]}, ignore_index=True)
+            interconnections_C = pd.concat([interconnections_C, pd.DataFrame.from_records([{"Line": lines_matrix["Line"][index], "Country 1": country1, "Country 2": country2, "Flow": lines_matrix["Flow"][index]}], index =[index])]) #updated for pandas 2.2
         if SO_owner:
             L_SO1, L_SO2           = get_line_SOs(lines_matrix["Line"][index],attribute_matrix, nodes_matrix,attribute_dic)
             if L_SO1 != L_SO2 and isinstance(L_SO2,str):
-                interconnections_T = interconnections_T.append({"Line": lines_matrix["Line"][index], "SO 1": L_SO1, "SO 2": L_SO2, "Flow": lines_matrix["Flow"][index]}, ignore_index=True)
+                interconnections_T = pd.concat([interconnections_T, pd.DataFrame.from_records([{"Line": lines_matrix["Line"][index], "SO 1": L_SO1, "SO 2": L_SO2, "Flow": lines_matrix["Flow"][index]}], index =[index])])
       
         if process_line_ownership and SO_owner:
             ownership["SO Owner 1"][index], ownership["SO Owner 2"][index] = L_SO1, L_SO2
@@ -288,10 +301,9 @@ def get_input_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, a
             else:
                 ownership["SO 1 Ownership"][index] = 0.5
                 ownership["SO 2 Ownership"][index] = 0.5
-    
-    interconnections_C  = interconnections_C.set_index(["Line"])
-    interconnections_T  = interconnections_T.set_index(["Line"]) 
-    
+
+    # interconnections_C  = interconnections_C.set_index(["Line"])  # upgrade 3.12 comment
+    # interconnections_T  = interconnections_T.set_index(["Line"])  # upgrade 3.12 comment
 
     return gen, dem, react, flows_matrix, phi, phi_positive, interconnections_C, interconnections_T, ownership
 
@@ -380,11 +392,11 @@ def get_pin_pd_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, 
     return pin, pd
 
 
-def get_contribution_per_asset(contribution_matrix: np.ndarray, nodes_matrix: pd.DataFrame, lines_matrix: pd.DataFrame, grouping: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def get_contribution_per_asset(contribution_matrix: np.ndarray, nodes_matrix: pd.DataFrame, lines_matrix: pd.DataFrame, grouping: str, index_name:str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     "This function aggregates the contribution of a group, countries, SOs or even zones"
 
     groups               = Counter(nodes_matrix[grouping])  # type: Collection.Counters
-    groups_contribution  = pd.DataFrame(index = lines_matrix["Line"])
+    groups_contribution  = pd.DataFrame(index = lines_matrix[index_name])
     group_node           = pd.DataFrame(nodes_matrix["Node"], index = nodes_matrix.index)
     for x in groups: # countries loop
         group_node[x]                       = 0.0
@@ -439,6 +451,40 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     lines_sn                    = pd.read_excel(input_file, sheet_name ="Flows", index_col=0)
     lines_attributes            = pd.read_excel(input_file, sheet_name ="Assets attributes", index_col=0)
 
+    # re-indexing all dataframes
+    nodes_sn.reset_index(inplace=True, drop=True)
+    nodes_sn.index          +=1
+    lines_sn.reset_index(inplace=True, drop=True)
+    lines_sn.index          +=1
+    lines_attributes.reset_index(inplace=True, drop=True)
+    lines_attributes.index  +=1
+
+    #%% input data checks
+    # check if the number of assets is the same in lines_sn and line_attribute
+    if len(lines_sn) != len(lines_attributes):
+        exit_error("The number of assets is not the same in the 'Assets attributes' and 'Flows' tabs. " \
+        "Please make sure that both tabs have the same number of assets (rows) and re-run the software again.")
+
+    # check if the assets have the same indices in both tabs
+    same        = lines_sn['Line'] == lines_attributes['Line']
+    all_same    = same.all()
+
+    if not all_same:
+        # sort by lines and reindex for both
+        lines_sn                = lines_sn.sort_values(by=['Line'])
+        lines_attributes        = lines_attributes.sort_values(by=['Line'])
+        lines_sn.reset_index(inplace=True, drop=True)
+        lines_sn.index          +=1
+        lines_attributes.reset_index(inplace=True, drop=True)
+        lines_attributes.index  +=1
+
+    # check if the ordered list is the same in both tabs    
+    same        = lines_sn['Line'] == lines_attributes['Line']
+    all_same    = same.all()
+    if not all_same:
+        exit_error("The list of assets is different in the 'Flows' and 'Assets attributes' tabs. Please make sure that both tabs have "\
+                   "the same list of assets under column 'Line' and re-run the software again.")
+
     # sort for easy calculation
     if "ID" in lines_sn.columns and "ID" in lines_attributes.columns:
         lines_sn                    = lines_sn.sort_values(by=['Line',"ID"])
@@ -455,11 +501,54 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
         lines_sn                    = lines_sn.sort_values(by=['Line'])
         lines_attributes            = lines_attributes.sort_values(by=['Line'])
     
-    lines_attributes.set_index(["Line"],inplace=True)
-    lines_sn.reset_index(inplace=True)
-    lines_sn.index              +=1
+    lines_sn.reset_index(inplace=True, drop=True)
+    lines_sn.index          +=1
+    lines_attributes.reset_index(inplace=True, drop=True)
+    lines_attributes.index  +=1
 
-    # control inputs
+    # check if there are duplicated assets and ID
+    dup_flow = lines_sn['Line'].duplicated().any()
+    dup_attr = lines_attributes['Line'].duplicated().any()
+    if dup_flow and "ID" not in lines_sn.columns:
+        exit_error("Duplicated assets were found in the 'Flows' tab without ID. An 'ID' column is required to distinguish duplicated assets. " \
+        "Please add an 'ID' column and assign different IDs for duplicated assets and re-run the software again.")
+    if dup_attr and "ID" not in lines_attributes.columns:
+        exit_error("Duplicated assets were found in the 'Asset attributes' tab without ID. An 'ID' column is required to distinguish duplicated assets. " \
+        "Please add an 'ID' column and assign different IDs for duplicated assets and re-run the software again.")
+    
+    # check if there is inconsistency in the duplication
+    if dup_flow != dup_attr:
+        exit_error("The 'Flows' and 'Asset attributes' tabs have inconsistent duplicated assets. Please make sure that the same list of assets" \
+        " is provided in both tabs and re-run the software again.")
+
+    if "ID" in lines_sn.columns:
+    # check if with the provided ID, the line-ID is unique
+        lines_sn['Line ID']         = lines_sn['Line'].astype(str) + '-' + lines_sn['ID'].astype(str)
+        lines_attributes['Line ID'] = lines_attributes['Line'].astype(str) + '-' + lines_attributes['ID'].astype(str)
+        dup2_flow                   = lines_sn['Line ID'].duplicated().any()
+        dup2_attr                   = lines_attributes['Line ID'].duplicated().any()
+        if dup2_flow:
+            exit_error("Duplicated assets were found in the 'Flows' tab with the same ID. The 'ID' values must be unique for duplicated assets. " \
+            "Please make sure to assign different IDs for each duplicated asset and re-run the software again.")
+        if dup2_attr:
+            exit_error("Duplicated assets were found in the 'Asset attributes' tab with the same ID. The 'ID' values must be unique for duplicated assets. " \
+            "Please make sure to assign different IDs for each duplicated asset and re-run the software again.")
+        
+        # check if the ordered list of assets is the same in both tabs with provided ID
+        same2        = lines_sn['Line ID'] == lines_attributes['Line ID']
+        all_same2    = same2.all()
+        
+        if not all_same2:
+            exit_error("The list of assets (line with ID) is different in the 'Flows' and 'Assets attributes' tabs. Please make sure that both tabs have "\
+                    "the same list of assets under columns 'Line' and 'ID' and re-run the software again.")
+        
+        lines_attributes.set_index(["Line ID"],inplace=True)
+        index_column = 'Line ID'
+    else:
+        lines_attributes.set_index(["Line"],inplace=True)
+        index_column = 'Line'
+
+    #%% control inputs
     config_path                     = os.path.abspath(os.path.join(input_file, '..'))
     configuration_file              = os.path.join(config_path, config_file + '.xlsx')
     control_inputs                  = pd.read_excel(configuration_file, index_col=0) 
@@ -469,7 +558,6 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     generation_weight               = control_inputs.loc["Generation Cost Responsibility (%)"][0]/100               # percentage 0-100
     demand_socialized_weight        = control_inputs.loc["Demand Socialized Cost Responsibility (%)"][0]/100        # percentage 0-100 
     generation_socialized_weight    = control_inputs.loc["Generation Socialized Cost Responsibility (%)"][0]/100    # percentage 0-100  
-    length_per_reactance            = control_inputs.loc["Length per Reactance (PU)"][0]                            # integer
     asset_types                     = control_inputs.loc["Asset Types"][0].split(",")                               # list
     n_snapshots                     = control_inputs.loc["Number of Snapshots"][0]                                  # integer
     snapshots_weights               = control_inputs.loc["Snapshots Weights"][0]                                    # list with length equals n_snapshots
@@ -509,6 +597,10 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
         regional_cost               = control_inputs.loc["Cost of regional assets"][0]                              # float
     except KeyError:
         regional_cost               =  0        
+    try:
+        length_per_reactance        = control_inputs.loc["Length per Reactance (PU)"][0]                            # integer
+    except KeyError:
+        length_per_reactance        = 1
 
     # initializing control variables
     remove_zero_values  = id_col            = Reactance_process = False                                             # internal setting to input variable to remove the zero value from the results 
@@ -517,10 +609,10 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     SO_aggregation = category_aggregation   = asset_type_cost   = False
     asset_type_dic                          = {int(asset_types[i].split(":")[1]):asset_types[i].split(":")[0] for i in range(len(asset_types))} 
     if snapshots_weights == "Equal" or snapshots_weights == "equal" or snapshots_weights == "EQUAL":
-        snapshots_weights_dic               = {i:1 for i in range(1,n_snapshots+1)}
+        snapshots_weights_dic               = {i:8760/n_snapshots for i in range(1,n_snapshots+1)}
     else:
         snapshots_weights                   = snapshots_weights.split(",")
-        snapshots_weights_dic               = {int(snapshots_weights[i].split(":")[0]):int(snapshots_weights[i].split(":")[1]) for i in range(len(snapshots_weights))} 
+        snapshots_weights_dic               = {int(snapshots_weights[i].split(":")[0]):float(snapshots_weights[i].split(":")[1]) for i in range(len(snapshots_weights))} 
 
     # checking the optional provided attributes
     attributes_provided = lines_attributes.columns
@@ -587,16 +679,19 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
         current_snapshot    = str(snapshot)
 
         if "Losses sn"+current_snapshot in lines_sn.columns:   # checking if losses are provided
-            lines           = lines_sn[["Line","Flow sn"+current_snapshot,"Losses sn"+current_snapshot]].copy()
+            lines           = lines_sn[["Line","Flow sn"+current_snapshot,"Losses sn"+current_snapshot, index_column]].copy()
             lines           = lines.rename(columns={"Flow sn"+current_snapshot:"Flow","Losses sn"+current_snapshot: "Losses"})
         else:
-            lines                       = lines_sn[["Line","Flow sn"+current_snapshot]].copy()
+            lines                       = lines_sn[["Line","Flow sn"+current_snapshot, index_column]].copy()
             lines                       = lines.rename(columns={"Flow sn"+current_snapshot:"Flow"})
             losses_allocation_results   = 0
 
         if id_col:
             lines["ID"] = id_column.to_numpy()
-            
+        
+        # remove duplicated columns, in case index_column equals Line
+        lines = lines.loc[:, ~lines.columns.duplicated()]
+
         other_attributes    = [i for i in nodes_sn.columns if "Generation" not in i]
         other_attributes    = [i for i in other_attributes if "Demand" not in i]
         nodes               = nodes_sn[["Generation sn"+current_snapshot,"Demand sn"+current_snapshot] + other_attributes].copy()
@@ -616,14 +711,14 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 else:
                     nodes.loc[indices_of_nodes_with_generation_and_demand[i], "Generation"] = 0.0
                     nodes.loc[indices_of_nodes_with_generation_and_demand[i], "Demand"] = abs(aggregation)
-
-        generation, demand, reactance, flows, phi, phiPositive, countries_interconnections, SOs_interconnections, Ownership_matrix = get_input_matrices(lines, nodes,lines_attributes,asset_type_dic,SO_aggregation, ownership_processing, Reactance_process)
+        
+        generation, demand, reactance, flows, phi, phiPositive, countries_interconnections, SOs_interconnections, Ownership_matrix = get_input_matrices(lines.copy(), nodes, lines_attributes, asset_type_dic, index_column, SO_aggregation, ownership_processing, Reactance_process)
         negative_demand, positive_demand    = extract_negative_demand(demand)
         modified_generation                 = generation - negative_demand
         is_all_ND_zeros                     = np.all(negative_demand == 0)
 
         # fill in the ownership matrix if given in the attribute file
-        Ownership_matrix                       = Ownership_matrix.set_index(["Line"]) 
+        # Ownership_matrix                       = Ownership_matrix.set_index([index_column])   # upgrade 3.12 comment
         if not ownership_processing:    
             Ownership_matrix["SO Owner 1"]     = lines_attributes["SO Owner 1"] 
             Ownership_matrix["SO Owner 2"]     = lines_attributes["SO Owner 2"] 
@@ -640,6 +735,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
         # the assumption here is that each node has only one agent, there cannot be two demand agents and two generator agents in one node
         gen_agent_flow_contribution_per_asset           = (AG * modified_generation[:, 0]).transpose()
         dem_agent_flow_contribution_per_asset           = (AD * positive_demand[:, 0]).transpose()
+
+        # place holder for average result calculation
         gen_agent_flow_contribution_per_asset_overall   += gen_agent_flow_contribution_per_asset*snapshots_weights_dic[snapshot]
         dem_agent_flow_contribution_per_asset_overall   += dem_agent_flow_contribution_per_asset*snapshots_weights_dic[snapshot]
         generation_overall                              += generation*snapshots_weights_dic[snapshot]
@@ -655,12 +752,12 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             line_losses_overall                         += line_losses*snapshots_weights_dic[snapshot]
 
         # defining some matrices in advance
-        x, country_nodes_matrix_G   = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "Country")
-        x, country_nodes_matrix_D   = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "Country")
+        x, country_nodes_matrix_G   = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "Country", index_column)
+        x, country_nodes_matrix_D   = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "Country", index_column)
         x, countries_lines          = get_contribution_per_group(x, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
         if SO_aggregation:
-            y, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "SO 1")
-            y, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "SO 1")
+            y, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "SO 1", index_column)
+            y, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "SO 1", index_column)
             y,   SOs_lines         = get_contribution_per_group(y, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
     
 
@@ -674,8 +771,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             
             if show_country_results:
                 # calculating the contribution of each country to the flow of each line
-                gen_country_flow_contribution_per_asset, country_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "Country")
-                dem_country_flow_contribution_per_asset, country_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "Country")
+                gen_country_flow_contribution_per_asset, country_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "Country", index_column)
+                dem_country_flow_contribution_per_asset, country_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "Country", index_column)
                 # another way to calculate contribution_by_countries_G is through matrix multiplication = np.matmul(gen_agent_contribution_per_asset.transpose(),country_nodes_matrix_G.drop(columns=['Node']).to_numpy())
                 # but I decided to keep the function since I need the loop to calculate the nodal matrix anyway, so there is no efficiency gain from removing it. 
                 if show_aggregated_results:
@@ -688,8 +785,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                       
             if show_SO_results:
                 # calculating the contribution of each SO to the flow of each line
-                gen_SO_flow_contribution_per_asset, SO_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "SO 1")
-                dem_SO_flow_contribution_per_asset, SO_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "SO 1")
+                gen_SO_flow_contribution_per_asset, SO_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "SO 1", index_column)
+                dem_SO_flow_contribution_per_asset, SO_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "SO 1", index_column)
                 if show_aggregated_results:
                     # calculating the contribution of each SO to the flow in other SOs
                     gen_SO_flow_contribution_per_SO,   SOs_lines    = get_contribution_per_group(gen_SO_flow_contribution_per_asset, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
@@ -708,8 +805,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     gen_agent_flow_contribution_per_SO   = np.matmul(gen_agent_flow_contribution_per_asset,SOs_lines.to_numpy())
                     dem_agent_flow_contribution_per_SO   = np.matmul(dem_agent_flow_contribution_per_asset,SOs_lines.to_numpy())
                 if category_aggregation:
-                    gen_agent_flow_contribution_per_asset_category  = get_aggregation_per_category(pd.DataFrame(gen_agent_flow_contribution_per_asset.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
-                    dem_agent_flow_contribution_per_asset_category  = get_aggregation_per_category(pd.DataFrame(dem_agent_flow_contribution_per_asset.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
+                    gen_agent_flow_contribution_per_asset_category  = get_aggregation_per_category(pd.DataFrame(gen_agent_flow_contribution_per_asset.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
+                    dem_agent_flow_contribution_per_asset_category  = get_aggregation_per_category(pd.DataFrame(dem_agent_flow_contribution_per_asset.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
 
             #%% usage results in terms of flow-km (MW*km)            
             if usage_result:
@@ -722,12 +819,12 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         gen_agent_flow_km_contribution_per_SO               = np.matmul(gen_agent_flow_km_contribution_per_asset,SOs_lines.to_numpy())
                         dem_agent_flow_km_contribution_per_SO               = np.matmul(dem_agent_flow_km_contribution_per_asset,SOs_lines.to_numpy())
                     if category_aggregation:
-                        gen_agent_flow_km_contribution_per_asset_category   = get_aggregation_per_category(pd.DataFrame(gen_agent_flow_km_contribution_per_asset.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
-                        dem_agent_flow_km_contribution_per_asset_category   = get_aggregation_per_category(pd.DataFrame(dem_agent_flow_km_contribution_per_asset.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
+                        gen_agent_flow_km_contribution_per_asset_category   = get_aggregation_per_category(pd.DataFrame(gen_agent_flow_km_contribution_per_asset.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
+                        dem_agent_flow_km_contribution_per_asset_category   = get_aggregation_per_category(pd.DataFrame(dem_agent_flow_km_contribution_per_asset.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
                     
                 if show_country_results:
-                    gen_country_flow_km_contribution_per_asset, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_flow_km_contribution_per_asset, nodes, lines, "Country")
-                    dem_country_flow_km_contribution_per_asset, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_flow_km_contribution_per_asset, nodes, lines, "Country")
+                    gen_country_flow_km_contribution_per_asset, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_flow_km_contribution_per_asset, nodes, lines, "Country", index_column)
+                    dem_country_flow_km_contribution_per_asset, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_flow_km_contribution_per_asset, nodes, lines, "Country", index_column)
                     if show_aggregated_results:
                         gen_country_flow_km_contribution_per_country, countries_lines   = get_contribution_per_group(gen_country_flow_km_contribution_per_asset, reactance, length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
                         dem_country_flow_km_contribution_per_country, countries_lines   = get_contribution_per_group(dem_country_flow_km_contribution_per_asset, reactance, length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
@@ -736,8 +833,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                             dem_country_flow_km_contribution_per_asset_category         = get_aggregation_per_category(dem_country_flow_km_contribution_per_asset, lines_attributes)
 
                 if show_SO_results:
-                    gen_SO_flow_km_contribution_per_asset, SO_nodes_matrix_G  = get_contribution_per_asset(gen_agent_flow_km_contribution_per_asset, nodes, lines, "SO 1")
-                    dem_SO_flow_km_contribution_per_asset, SO_nodes_matrix_D  = get_contribution_per_asset(dem_agent_flow_km_contribution_per_asset, nodes, lines, "SO 1") 
+                    gen_SO_flow_km_contribution_per_asset, SO_nodes_matrix_G  = get_contribution_per_asset(gen_agent_flow_km_contribution_per_asset, nodes, lines, "SO 1", index_column)
+                    dem_SO_flow_km_contribution_per_asset, SO_nodes_matrix_D  = get_contribution_per_asset(dem_agent_flow_km_contribution_per_asset, nodes, lines, "SO 1", index_column) 
                     if show_aggregated_results:
                         gen_SO_flow_km_contribution_per_SO,   SOs_lines       = get_contribution_per_group(gen_SO_flow_km_contribution_per_asset, reactance, length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
                         dem_SO_flow_km_contribution_per_SO,   SOs_lines       = get_contribution_per_group(dem_SO_flow_km_contribution_per_asset, reactance, length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
@@ -779,15 +876,15 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         dem_agent_utilization_fraction_per_asset_category   = get_utilization_per_category(dem_agent_flow_km_contribution_per_asset_category, dem_agent_flow_contribution_per_asset_category, flow_km_per_category, flow_per_category, asset_type_dic)
    
                     if show_country_results:
-                        gen_country_utilization_fraction_per_asset, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_utilization_fraction_per_asset, nodes, lines, "Country")
-                        dem_country_utilization_fraction_per_asset, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_utilization_fraction_per_asset, nodes, lines, "Country")
+                        gen_country_utilization_fraction_per_asset, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_utilization_fraction_per_asset, nodes, lines, "Country", index_column)
+                        dem_country_utilization_fraction_per_asset, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_utilization_fraction_per_asset, nodes, lines, "Country", index_column)
                         if category_aggregation and usage_result and show_aggregated_results:
                             gen_country_utilization_fraction_per_asset_category             = get_utilization_per_category(gen_country_flow_km_contribution_per_asset_category, gen_country_flow_contribution_per_asset_category, flow_km_per_category, flow_per_category, asset_type_dic)
                             dem_country_utilization_fraction_per_asset_category             = get_utilization_per_category(dem_country_flow_km_contribution_per_asset_category, dem_country_flow_contribution_per_asset_category, flow_km_per_category, flow_per_category, asset_type_dic)
                     
                     if show_SO_results:
-                        gen_SO_utilization_fraction_per_asset, SO_nodes_matrix_G  = get_contribution_per_asset(gen_agent_utilization_fraction_per_asset, nodes, lines, "SO 1")
-                        dem_SO_utilization_fraction_per_asset, SO_nodes_matrix_D  = get_contribution_per_asset(dem_agent_utilization_fraction_per_asset, nodes, lines, "SO 1")
+                        gen_SO_utilization_fraction_per_asset, SO_nodes_matrix_G  = get_contribution_per_asset(gen_agent_utilization_fraction_per_asset, nodes, lines, "SO 1", index_column)
+                        dem_SO_utilization_fraction_per_asset, SO_nodes_matrix_D  = get_contribution_per_asset(dem_agent_utilization_fraction_per_asset, nodes, lines, "SO 1", index_column)
                         if category_aggregation and usage_result and show_aggregated_results:
                             gen_SO_utilization_fraction_per_asset_category        = get_utilization_per_category(gen_SO_flow_km_contribution_per_asset_category, gen_SO_flow_contribution_per_asset_category, flow_km_per_category, flow_per_category, asset_type_dic)
                             dem_SO_utilization_fraction_per_asset_category        = get_utilization_per_category(dem_SO_flow_km_contribution_per_asset_category, dem_SO_flow_contribution_per_asset_category, flow_km_per_category, flow_per_category, asset_type_dic)
@@ -817,12 +914,12 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         gen_agent_losses_allocation_per_SO  = np.matmul(gen_agent_losses_allocation_per_asset,SOs_lines.to_numpy())
                         dem_agent_losses_allocation_per_SO  = np.matmul(dem_agent_losses_allocation_per_asset,SOs_lines.to_numpy())
                     if category_aggregation:
-                        gen_agent_losses_allocation_per_asset_category   = get_aggregation_per_category(pd.DataFrame(gen_agent_losses_allocation_per_asset.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
-                        dem_agent_losses_allocation_per_asset_category   = get_aggregation_per_category(pd.DataFrame(dem_agent_losses_allocation_per_asset.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
+                        gen_agent_losses_allocation_per_asset_category   = get_aggregation_per_category(pd.DataFrame(gen_agent_losses_allocation_per_asset.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
+                        dem_agent_losses_allocation_per_asset_category   = get_aggregation_per_category(pd.DataFrame(dem_agent_losses_allocation_per_asset.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
                               
                 if show_country_results:
-                    gen_country_losses_allocation_per_asset, country_nodes_matrix_G = get_contribution_per_asset(gen_agent_losses_allocation_per_asset, nodes, lines, "Country")
-                    dem_country_losses_allocation_per_asset, country_nodes_matrix_D = get_contribution_per_asset(dem_agent_losses_allocation_per_asset, nodes, lines, "Country")
+                    gen_country_losses_allocation_per_asset, country_nodes_matrix_G = get_contribution_per_asset(gen_agent_losses_allocation_per_asset, nodes, lines, "Country", index_column)
+                    dem_country_losses_allocation_per_asset, country_nodes_matrix_D = get_contribution_per_asset(dem_agent_losses_allocation_per_asset, nodes, lines, "Country", index_column)
                     if show_aggregated_results:
                         gen_country_losses_allocation_per_country, countries_lines  = get_contribution_per_group(gen_country_losses_allocation_per_asset, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
                         dem_country_losses_allocation_per_country, countries_lines  = get_contribution_per_group(dem_country_losses_allocation_per_asset, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
@@ -832,8 +929,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                             dem_country_losses_allocation_per_asset_category        = get_aggregation_per_category(dem_country_losses_allocation_per_asset, lines_attributes)
                          
                 if show_SO_results:
-                    gen_SO_losses_allocation_per_asset, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_losses_allocation_per_asset, nodes, lines, "SO 1")
-                    dem_SO_losses_allocation_per_asset, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_losses_allocation_per_asset, nodes, lines, "SO 1")
+                    gen_SO_losses_allocation_per_asset, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_losses_allocation_per_asset, nodes, lines, "SO 1", index_column)
+                    dem_SO_losses_allocation_per_asset, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_losses_allocation_per_asset, nodes, lines, "SO 1", index_column)
                     if show_aggregated_results:
                         gen_SO_losses_allocation_per_SO,   SOs_lines        = get_contribution_per_group(gen_SO_losses_allocation_per_asset, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
                         dem_SO_losses_allocation_per_SO,   SOs_lines        = get_contribution_per_group(dem_SO_losses_allocation_per_asset, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
@@ -930,16 +1027,16 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         gen_agent_cost_per_SO               = np.matmul(gen_agent_cost_per_asset,SOs_lines.to_numpy())
                         dem_agent_cost_per_SO               = np.matmul(dem_agent_cost_per_asset,SOs_lines.to_numpy())
                     if category_aggregation:
-                        gen_agent_cost_per_asset_category   = get_aggregation_per_category(pd.DataFrame(gen_agent_cost_per_asset.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
-                        dem_agent_cost_per_asset_category   = get_aggregation_per_category(pd.DataFrame(dem_agent_cost_per_asset.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
+                        gen_agent_cost_per_asset_category   = get_aggregation_per_category(pd.DataFrame(gen_agent_cost_per_asset.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
+                        dem_agent_cost_per_asset_category   = get_aggregation_per_category(pd.DataFrame(dem_agent_cost_per_asset.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
                         # final cost-weighted utilization of the whole network
                         if usage_result:
                             gen_agent_network_utilization_fraction  = ((gen_agent_utilization_fraction_per_asset_category*cost_per_category.to_numpy().transpose()[:,0]).sum(axis=1)/cost_per_category.sum(axis=1)[0]).to_frame(name='Network Utilization %')              
                             dem_agent_network_utilization_fraction  = ((dem_agent_utilization_fraction_per_asset_category*cost_per_category.to_numpy().transpose()[:,0]).sum(axis=1)/cost_per_category.sum(axis=1)[0]).to_frame(name='Network Utilization %')
                             
                 if show_country_results:
-                    gen_country_cost_per_asset, country_nodes_matrix_G      = get_contribution_per_asset(gen_agent_cost_per_asset, nodes, lines, "Country")
-                    dem_country_cost_per_asset, country_nodes_matrix_D      = get_contribution_per_asset(dem_agent_cost_per_asset, nodes, lines, "Country")
+                    gen_country_cost_per_asset, country_nodes_matrix_G      = get_contribution_per_asset(gen_agent_cost_per_asset, nodes, lines, "Country", index_column)
+                    dem_country_cost_per_asset, country_nodes_matrix_D      = get_contribution_per_asset(dem_agent_cost_per_asset, nodes, lines, "Country", index_column)
                     if show_aggregated_results:
                         gen_country_cost_per_country, countries_lines       = get_contribution_per_group(gen_country_cost_per_asset, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
                         dem_country_cost_per_country, countries_lines       = get_contribution_per_group(dem_country_cost_per_asset, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
@@ -952,8 +1049,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                                 dem_country_network_utilization_fraction    = ((dem_country_utilization_fraction_per_asset_category*cost_per_category.to_numpy().transpose()[:,0]).sum(axis=1)/cost_per_category.sum(axis=1)[0]).to_frame(name='Network Utilization %')
                         
                 if show_SO_results:
-                    gen_SO_cost_per_asset, SO_nodes_matrix_G        = get_contribution_per_asset(gen_agent_cost_per_asset, nodes, lines, "SO 1")
-                    dem_SO_cost_per_asset, SO_nodes_matrix_D        = get_contribution_per_asset(dem_agent_cost_per_asset, nodes, lines, "SO 1")
+                    gen_SO_cost_per_asset, SO_nodes_matrix_G        = get_contribution_per_asset(gen_agent_cost_per_asset, nodes, lines, "SO 1", index_column)
+                    dem_SO_cost_per_asset, SO_nodes_matrix_D        = get_contribution_per_asset(dem_agent_cost_per_asset, nodes, lines, "SO 1", index_column)
                     if show_aggregated_results:
                         gen_SO_cost_per_SO,   SOs_lines             = get_contribution_per_group(gen_SO_cost_per_asset, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
                         dem_SO_cost_per_SO,   SOs_lines             = get_contribution_per_group(dem_SO_cost_per_asset, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
@@ -1195,52 +1292,52 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             # cost results
             if cost_result:
                 if show_agent_results:
-                    print_to_csv(output_file+"Generation agents cost per asset sn_"+current_snapshot, gen_agent_cost_per_asset, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
-                    print_to_csv(output_file+"Demand agents cost per asset sn_"+current_snapshot, dem_agent_cost_per_asset, index=nodes["Node"], columns=lines["Line"],total=True, remove_zeros=remove_zero_values)
+                    print_to_csv(output_file+"Generation agents network usage cost per asset sn_"+current_snapshot, gen_agent_cost_per_asset, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
+                    print_to_csv(output_file+"Demand agents network usage cost per asset sn_"+current_snapshot, dem_agent_cost_per_asset, index=nodes["Node"], columns=lines["Line"],total=True, remove_zeros=remove_zero_values)
                     if not is_all_ND_zeros:
-                        remove_zero_rows_and_columns(negative_dem_agent_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"Negative demand agents cost per asset sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(negative_dem_agent_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"Negative demand agents network usage cost per asset sn_"+current_snapshot+".csv")
                     if cost_of_unused_capacity_op:
-                        print_to_csv(output_file+"Generation agents socialized cost per asset sn_"+current_snapshot, gen_agent_socialized_cost_per_asset, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
-                        print_to_csv(output_file+"Demand agents socialized cost per asset sn_"+current_snapshot, dem_agent_socialized_cost_per_asset, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
+                        print_to_csv(output_file+"Generation agents socialized network usage cost per asset sn_"+current_snapshot, gen_agent_socialized_cost_per_asset, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
+                        print_to_csv(output_file+"Demand agents socialized network usage cost per asset sn_"+current_snapshot, dem_agent_socialized_cost_per_asset, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
                     if show_aggregated_results:
-                        print_to_csv(output_file+"Generation agents cost per country sn_"+current_snapshot, gen_agent_cost_per_country, index=nodes["Node"], columns=countries_lines.columns, total=False, remove_zeros=remove_zero_values)
-                        print_to_csv(output_file+"Demand agents cost per country sn_"+current_snapshot, dem_agent_cost_per_country, index=nodes["Node"], columns=countries_lines.columns, total=False, remove_zeros=remove_zero_values)
-                        print_to_csv(output_file+"Generation agents total cost sn_"+current_snapshot, gen_agent_total_cost, index=nodes["Node"], columns=['Total cost KUS$'], total=True, remove_zeros=remove_zero_values)
-                        print_to_csv(output_file+"Demand agents total cost sn_"+current_snapshot, dem_agent_total_cost, index=nodes["Node"], columns=['Total cost KUS$'], total=True, remove_zeros=remove_zero_values)
+                        print_to_csv(output_file+"Generation agents network usage cost per country sn_"+current_snapshot, gen_agent_cost_per_country, index=nodes["Node"], columns=countries_lines.columns, total=False, remove_zeros=remove_zero_values)
+                        print_to_csv(output_file+"Demand agents network usage cost per country sn_"+current_snapshot, dem_agent_cost_per_country, index=nodes["Node"], columns=countries_lines.columns, total=False, remove_zeros=remove_zero_values)
+                        print_to_csv(output_file+"Generation agents total network usage cost sn_"+current_snapshot, gen_agent_total_cost, index=nodes["Node"], columns=['Total cost KUS$'], total=True, remove_zeros=remove_zero_values)
+                        print_to_csv(output_file+"Demand agents total network usage cost sn_"+current_snapshot, dem_agent_total_cost, index=nodes["Node"], columns=['Total cost KUS$'], total=True, remove_zeros=remove_zero_values)
                         if SO_aggregation:  
-                            print_to_csv(output_file+"Generation agents cost per SO sn_"+current_snapshot, gen_agent_cost_per_SO, index=nodes["Node"], columns=SOs_lines.columns, total=False, remove_zeros=remove_zero_values)
-                            print_to_csv(output_file+"Demand agents cost per SO sn_"+current_snapshot, dem_agent_cost_per_SO, index=nodes["Node"], columns=SOs_lines.columns, total=False, remove_zeros=remove_zero_values)
+                            print_to_csv(output_file+"Generation agents network usage cost per SO sn_"+current_snapshot, gen_agent_cost_per_SO, index=nodes["Node"], columns=SOs_lines.columns, total=False, remove_zeros=remove_zero_values)
+                            print_to_csv(output_file+"Demand agents network usage cost per SO sn_"+current_snapshot, dem_agent_cost_per_SO, index=nodes["Node"], columns=SOs_lines.columns, total=False, remove_zeros=remove_zero_values)
                         if category_aggregation:
-                            remove_zero_rows_and_columns(gen_agent_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Generation agents cost per asset category sn_"+current_snapshot+".csv")
-                            remove_zero_rows_and_columns(dem_agent_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Demand agents cost per asset category sn_"+current_snapshot+".csv")
+                            remove_zero_rows_and_columns(gen_agent_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Generation agents network usage cost per asset category sn_"+current_snapshot+".csv")
+                            remove_zero_rows_and_columns(dem_agent_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Demand agents network usage cost per asset category sn_"+current_snapshot+".csv")
                             if usage_result:
                                 remove_zero_rows_and_columns(gen_agent_network_utilization_fraction, remove_zero_values, remove_zero_values).to_csv(output_file+"Generation agents network utilization sn_"+current_snapshot+".csv")
                                 remove_zero_rows_and_columns(dem_agent_network_utilization_fraction, remove_zero_values, remove_zero_values).to_csv(output_file+"Demand agents network utilization sn_"+current_snapshot+".csv")
                     
                 if show_country_results:
-                    remove_zero_rows_and_columns(gen_country_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation cost per asset sn_"+current_snapshot+".csv")
-                    remove_zero_rows_and_columns(dem_country_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand cost per asset sn_"+current_snapshot+".csv")
+                    remove_zero_rows_and_columns(gen_country_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation network usage cost per asset sn_"+current_snapshot+".csv")
+                    remove_zero_rows_and_columns(dem_country_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand network usage cost per asset sn_"+current_snapshot+".csv")
                     if show_aggregated_results:
-                        remove_zero_rows_and_columns(gen_country_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation cost per country sn_"+current_snapshot+".csv")
-                        remove_zero_rows_and_columns(dem_country_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand cost per country sn_"+current_snapshot+".csv")
-                        remove_zero_rows_and_columns(country_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country joint cost per country sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(gen_country_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation network usage cost per country sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(dem_country_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand network usage cost per country sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(country_cost_per_country.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country joint network usage cost per country sn_"+current_snapshot+".csv")
                         if category_aggregation:
-                            remove_zero_rows_and_columns(gen_country_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation cost per asset category sn_"+current_snapshot+".csv")
-                            remove_zero_rows_and_columns(dem_country_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand cost per asset category sn_"+current_snapshot+".csv")
+                            remove_zero_rows_and_columns(gen_country_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation network usage cost per asset category sn_"+current_snapshot+".csv")
+                            remove_zero_rows_and_columns(dem_country_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand network usage cost per asset category sn_"+current_snapshot+".csv")
                             if usage_result:
                                 remove_zero_rows_and_columns(gen_country_network_utilization_fraction, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation network utilization sn_"+current_snapshot+".csv")
                                 remove_zero_rows_and_columns(dem_country_network_utilization_fraction, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand network utilization sn_"+current_snapshot+".csv")
 
                 if show_SO_results:
-                    remove_zero_rows_and_columns(gen_SO_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation cost per asset sn_"+current_snapshot+".csv")
-                    remove_zero_rows_and_columns(dem_SO_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand cost per asset sn_"+current_snapshot+".csv")
+                    remove_zero_rows_and_columns(gen_SO_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation network usage cost per asset sn_"+current_snapshot+".csv")
+                    remove_zero_rows_and_columns(dem_SO_cost_per_asset, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand network usage cost per asset sn_"+current_snapshot+".csv")
                     if show_aggregated_results:
-                        remove_zero_rows_and_columns(gen_SO_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation cost per SO sn_"+current_snapshot+".csv")
-                        remove_zero_rows_and_columns(dem_SO_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand cost per SO sn_"+current_snapshot+".csv")
-                        remove_zero_rows_and_columns(SO_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO joint cost per SO sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(gen_SO_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation network usage cost per SO sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(dem_SO_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand network usage cost per SO sn_"+current_snapshot+".csv")
+                        remove_zero_rows_and_columns(SO_cost_per_SO.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO joint network usage cost per SO sn_"+current_snapshot+".csv")
                         if category_aggregation:
-                            remove_zero_rows_and_columns(gen_SO_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation cost per asset category sn_"+current_snapshot+".csv")
-                            remove_zero_rows_and_columns(dem_SO_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand cost per asset category sn_"+current_snapshot+".csv")
+                            remove_zero_rows_and_columns(gen_SO_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation network usage cost per asset category sn_"+current_snapshot+".csv")
+                            remove_zero_rows_and_columns(dem_SO_cost_per_asset_category, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand network usage cost per asset category sn_"+current_snapshot+".csv")
                             if usage_result:
                                 remove_zero_rows_and_columns(gen_SO_network_utilization_fraction, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation network utilization sn_"+current_snapshot+".csv")
                                 remove_zero_rows_and_columns(dem_SO_network_utilization_fraction, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand network utilization sn_"+current_snapshot+".csv")
@@ -1251,22 +1348,23 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     if not os.path.exists(output_file):
         os.makedirs(output_file)
 
-    line_flow_overall                               = line_flow_overall/sum(snapshots_weights_dic.values())
-    line_losses_overall                             = line_losses_overall/sum(snapshots_weights_dic.values())
-    modified_generation_overall                     = modified_generation_overall/sum(snapshots_weights_dic.values())
-    generation_overall                              = generation_overall/sum(snapshots_weights_dic.values())
-    positive_demand_overall                         = positive_demand_overall/sum(snapshots_weights_dic.values())
-    negative_demand_overall                         = negative_demand_overall/sum(snapshots_weights_dic.values())
+    overall_snapshots_weight                        = sum(snapshots_weights_dic.values())
+    line_flow_overall                               = line_flow_overall/overall_snapshots_weight
+    line_losses_overall                             = line_losses_overall/overall_snapshots_weight
+    modified_generation_overall                     = modified_generation_overall/overall_snapshots_weight
+    generation_overall                              = generation_overall/overall_snapshots_weight
+    positive_demand_overall                         = positive_demand_overall/overall_snapshots_weight
+    negative_demand_overall                         = negative_demand_overall/overall_snapshots_weight
     is_all_ND_zeros                                 = np.all(negative_demand_overall == 0)
-    gen_agent_flow_contribution_per_asset_overall   = gen_agent_flow_contribution_per_asset_overall/sum(snapshots_weights_dic.values())
-    dem_agent_flow_contribution_per_asset_overall   = dem_agent_flow_contribution_per_asset_overall/sum(snapshots_weights_dic.values())
+    gen_agent_flow_contribution_per_asset_overall   = gen_agent_flow_contribution_per_asset_overall/overall_snapshots_weight
+    dem_agent_flow_contribution_per_asset_overall   = dem_agent_flow_contribution_per_asset_overall/overall_snapshots_weight
     
     if not is_all_ND_zeros:
         negative_dem_agent_contribution_per_asset_overall   = get_negative_demand_contribution(negative_demand_overall, generation_overall, gen_agent_flow_contribution_per_asset_overall, nodes_sn, lines_sn)
 
     if show_country_results:
-        gen_country_flow_contribution_per_asset_overall, country_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_contribution_per_asset_overall, nodes, lines, "Country")
-        dem_country_flow_contribution_per_asset_overall, country_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_contribution_per_asset_overall, nodes, lines, "Country")
+        gen_country_flow_contribution_per_asset_overall, country_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_contribution_per_asset_overall, nodes, lines, "Country", index_column)
+        dem_country_flow_contribution_per_asset_overall, country_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_contribution_per_asset_overall, nodes, lines, "Country", index_column)
         if show_aggregated_results:
             gen_country_flow_contribution_per_country_overall, countries_lines  = get_contribution_per_group(gen_country_flow_contribution_per_asset_overall, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
             dem_country_flow_contribution_per_country_overall, countries_lines  = get_contribution_per_group(dem_country_flow_contribution_per_asset_overall, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
@@ -1275,8 +1373,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 dem_country_flow_contribution_per_asset_category_overall        = get_aggregation_per_category(dem_country_flow_contribution_per_asset_overall, lines_attributes)
                 
     if show_SO_results:
-        gen_SO_flow_contribution_per_asset_overall, SO_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_contribution_per_asset_overall, nodes, lines, "SO 1")
-        dem_SO_flow_contribution_per_asset_overall, SO_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_contribution_per_asset_overall, nodes, lines, "SO 1")
+        gen_SO_flow_contribution_per_asset_overall, SO_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_contribution_per_asset_overall, nodes, lines, "SO 1", index_column)
+        dem_SO_flow_contribution_per_asset_overall, SO_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_contribution_per_asset_overall, nodes, lines, "SO 1", index_column)
         if show_aggregated_results:
             gen_SO_flow_contribution_per_SO_overall,   SOs_lines      = get_contribution_per_group(gen_SO_flow_contribution_per_asset_overall, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
             dem_SO_flow_contribution_per_SO_overall,   SOs_lines      = get_contribution_per_group(dem_SO_flow_contribution_per_asset_overall, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
@@ -1291,8 +1389,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             gen_agent_flow_contribution_per_SO_overall              = np.matmul(gen_agent_flow_contribution_per_asset_overall,SOs_lines.to_numpy())
             dem_agent_flow_contribution_per_SO_overall              = np.matmul(dem_agent_flow_contribution_per_asset_overall,SOs_lines.to_numpy())
         if category_aggregation:
-            gen_agent_flow_contribution_per_asset_category_overall  = get_aggregation_per_category(pd.DataFrame(gen_agent_flow_contribution_per_asset_overall.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
-            dem_agent_flow_contribution_per_asset_category_overall  = get_aggregation_per_category(pd.DataFrame(dem_agent_flow_contribution_per_asset_overall.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
+            gen_agent_flow_contribution_per_asset_category_overall  = get_aggregation_per_category(pd.DataFrame(gen_agent_flow_contribution_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
+            dem_agent_flow_contribution_per_asset_category_overall  = get_aggregation_per_category(pd.DataFrame(dem_agent_flow_contribution_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
 
     if fraction_result:
         if cost_assignment_op == 1:     # utilization with respect to the used capacity
@@ -1414,8 +1512,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     
         # the remaining cost results
         if show_country_results:
-            gen_country_cost_per_asset_overall, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_cost_per_asset_overall, nodes, lines, "Country")
-            dem_country_cost_per_asset_overall, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_cost_per_asset_overall, nodes, lines, "Country")
+            gen_country_cost_per_asset_overall, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_cost_per_asset_overall, nodes, lines, "Country", index_column)
+            dem_country_cost_per_asset_overall, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_cost_per_asset_overall, nodes, lines, "Country", index_column)
             if show_aggregated_results:
                 gen_country_cost_per_country_overall, countries_lines   = get_contribution_per_group(gen_country_cost_per_asset_overall, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
                 dem_country_cost_per_country_overall, countries_lines   = get_contribution_per_group(dem_country_cost_per_asset_overall, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country") 
@@ -1425,8 +1523,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     dem_country_cost_per_asset_category_overall         = get_aggregation_per_category(dem_country_cost_per_asset_overall, lines_attributes)
 
         if show_SO_results:
-            gen_SO_cost_per_asset_overall, SO_nodes_matrix_G            = get_contribution_per_asset(gen_agent_cost_per_asset_overall, nodes, lines, "SO 1")
-            dem_SO_cost_per_asset_overall, SO_nodes_matrix_D            = get_contribution_per_asset(dem_agent_cost_per_asset_overall, nodes, lines, "SO 1")
+            gen_SO_cost_per_asset_overall, SO_nodes_matrix_G            = get_contribution_per_asset(gen_agent_cost_per_asset_overall, nodes, lines, "SO 1", index_column)
+            dem_SO_cost_per_asset_overall, SO_nodes_matrix_D            = get_contribution_per_asset(dem_agent_cost_per_asset_overall, nodes, lines, "SO 1", index_column)
             if show_aggregated_results:
                 gen_SO_cost_per_SO_overall,   SOs_lines                 = get_contribution_per_group(gen_SO_cost_per_asset_overall, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
                 dem_SO_cost_per_SO_overall,   SOs_lines                 = get_contribution_per_group(dem_SO_cost_per_asset_overall, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
@@ -1444,8 +1542,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 gen_agent_cost_per_SO_overall                           = np.matmul(gen_agent_cost_per_asset_overall,SOs_lines.to_numpy())
                 dem_agent_cost_per_SO_overall                           = np.matmul(dem_agent_cost_per_asset_overall,SOs_lines.to_numpy())
             if category_aggregation:
-                gen_agent_cost_per_asset_category_overall               = get_aggregation_per_category(pd.DataFrame(gen_agent_cost_per_asset_overall.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
-                dem_agent_cost_per_asset_category_overall               = get_aggregation_per_category(pd.DataFrame(dem_agent_cost_per_asset_overall.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
+                gen_agent_cost_per_asset_category_overall               = get_aggregation_per_category(pd.DataFrame(gen_agent_cost_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
+                dem_agent_cost_per_asset_category_overall               = get_aggregation_per_category(pd.DataFrame(dem_agent_cost_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
 
     if losses_allocation_results:
         gen_agent_losses_allocation_per_asset_overall   = line_losses_overall[:,0]*gen_agent_flow_contribution_per_asset_overall/line_flow_overall[:,0]
@@ -1472,12 +1570,12 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 gen_agent_losses_allocation_per_SO_overall  = np.matmul(gen_agent_losses_allocation_per_asset_overall,SOs_lines.to_numpy())
                 dem_agent_losses_allocation_per_SO_overall  = np.matmul(dem_agent_losses_allocation_per_asset_overall,SOs_lines.to_numpy())
             if category_aggregation:
-                gen_agent_losses_allocation_per_asset_category_overall   = get_aggregation_per_category(pd.DataFrame(gen_agent_losses_allocation_per_asset_overall.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
-                dem_agent_losses_allocation_per_asset_category_overall   = get_aggregation_per_category(pd.DataFrame(dem_agent_losses_allocation_per_asset_overall.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
+                gen_agent_losses_allocation_per_asset_category_overall   = get_aggregation_per_category(pd.DataFrame(gen_agent_losses_allocation_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
+                dem_agent_losses_allocation_per_asset_category_overall   = get_aggregation_per_category(pd.DataFrame(dem_agent_losses_allocation_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
                         
         if show_country_results:
-            gen_country_losses_allocation_per_asset_overall, country_nodes_matrix_G = get_contribution_per_asset(gen_agent_losses_allocation_per_asset_overall, nodes, lines, "Country")
-            dem_country_losses_allocation_per_asset_overall, country_nodes_matrix_D = get_contribution_per_asset(dem_agent_losses_allocation_per_asset_overall, nodes, lines, "Country")
+            gen_country_losses_allocation_per_asset_overall, country_nodes_matrix_G = get_contribution_per_asset(gen_agent_losses_allocation_per_asset_overall, nodes, lines, "Country", index_column)
+            dem_country_losses_allocation_per_asset_overall, country_nodes_matrix_D = get_contribution_per_asset(dem_agent_losses_allocation_per_asset_overall, nodes, lines, "Country", index_column)
             if show_aggregated_results:
                 gen_country_losses_allocation_per_country_overall, countries_lines  = get_contribution_per_group(gen_country_losses_allocation_per_asset_overall, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
                 dem_country_losses_allocation_per_country_overall, countries_lines  = get_contribution_per_group(dem_country_losses_allocation_per_asset_overall, [], length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
@@ -1487,8 +1585,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     dem_country_losses_allocation_per_asset_category_overall        = get_aggregation_per_category(dem_country_losses_allocation_per_asset_overall, lines_attributes)
                     
         if show_SO_results:
-            gen_SO_losses_allocation_per_asset_overall, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_losses_allocation_per_asset_overall, nodes, lines, "SO 1")
-            dem_SO_losses_allocation_per_asset_overall, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_losses_allocation_per_asset_overall, nodes, lines, "SO 1")
+            gen_SO_losses_allocation_per_asset_overall, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_losses_allocation_per_asset_overall, nodes, lines, "SO 1", index_column)
+            dem_SO_losses_allocation_per_asset_overall, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_losses_allocation_per_asset_overall, nodes, lines, "SO 1", index_column)
             if show_aggregated_results:
                 gen_SO_losses_allocation_per_SO_overall,   SOs_lines        = get_contribution_per_group(gen_SO_losses_allocation_per_asset_overall, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
                 dem_SO_losses_allocation_per_SO_overall,   SOs_lines        = get_contribution_per_group(dem_SO_losses_allocation_per_asset_overall, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
@@ -1498,42 +1596,42 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     dem_SO_losses_allocation_per_asset_category_overall     = get_aggregation_per_category(dem_SO_losses_allocation_per_asset_overall, lines_attributes)
         
         if losses_price:
-            gen_agent_losses_allocation_cost_per_asset_overall   = gen_agent_losses_allocation_per_asset_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-            dem_agent_losses_allocation_cost_per_asset_overall   = dem_agent_losses_allocation_per_asset_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+            gen_agent_losses_allocation_cost_per_asset_overall   = gen_agent_losses_allocation_per_asset_overall*losses_price*overall_snapshots_weight*0.001
+            dem_agent_losses_allocation_cost_per_asset_overall   = dem_agent_losses_allocation_per_asset_overall*losses_price*overall_snapshots_weight*0.001
 
             if show_agent_results and show_aggregated_results:
-                gen_agent_losses_allocation_cost_per_country_overall = gen_agent_losses_allocation_per_country_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                dem_agent_losses_allocation_cost_per_country_overall = dem_agent_losses_allocation_per_country_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                gen_agent_total_losses_allocation_cost_overall       = gen_agent_total_losses_allocation_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                dem_agent_total_losses_allocation_cost_overall       = dem_agent_total_losses_allocation_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                gen_agent_losses_allocation_cost_per_country_overall = gen_agent_losses_allocation_per_country_overall*losses_price*overall_snapshots_weight*0.001
+                dem_agent_losses_allocation_cost_per_country_overall = dem_agent_losses_allocation_per_country_overall*losses_price*overall_snapshots_weight*0.001
+                gen_agent_total_losses_allocation_cost_overall       = gen_agent_total_losses_allocation_overall*losses_price*overall_snapshots_weight*0.001
+                dem_agent_total_losses_allocation_cost_overall       = dem_agent_total_losses_allocation_overall*losses_price*overall_snapshots_weight*0.001
                 if SO_aggregation:
-                    gen_agent_losses_allocation_cost_per_SO_overall  = gen_agent_losses_allocation_per_SO_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                    dem_agent_losses_allocation_cost_per_SO_overall  = dem_agent_losses_allocation_per_SO_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                    gen_agent_losses_allocation_cost_per_SO_overall  = gen_agent_losses_allocation_per_SO_overall*losses_price*overall_snapshots_weight*0.001
+                    dem_agent_losses_allocation_cost_per_SO_overall  = dem_agent_losses_allocation_per_SO_overall*losses_price*overall_snapshots_weight*0.001
                 if category_aggregation:
-                    gen_agent_losses_allocation_cost_per_asset_category_overall = gen_agent_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                    dem_agent_losses_allocation_cost_per_asset_category_overall = dem_agent_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                    gen_agent_losses_allocation_cost_per_asset_category_overall = gen_agent_losses_allocation_per_asset_category_overall*losses_price*overall_snapshots_weight*0.001
+                    dem_agent_losses_allocation_cost_per_asset_category_overall = dem_agent_losses_allocation_per_asset_category_overall*losses_price*overall_snapshots_weight*0.001
                             
             if show_country_results:
-                gen_country_losses_allocation_cost_per_asset_overall = gen_country_losses_allocation_per_asset_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                dem_country_losses_allocation_cost_per_asset_overall = dem_country_losses_allocation_per_asset_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                gen_country_losses_allocation_cost_per_asset_overall = gen_country_losses_allocation_per_asset_overall*losses_price*overall_snapshots_weight*0.001
+                dem_country_losses_allocation_cost_per_asset_overall = dem_country_losses_allocation_per_asset_overall*losses_price*overall_snapshots_weight*0.001
                 if show_aggregated_results:
-                    gen_country_losses_allocation_cost_per_country_overall   = gen_country_losses_allocation_per_country_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                    dem_country_losses_allocation_cost_per_country_overall   = dem_country_losses_allocation_per_country_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                    gen_country_losses_allocation_cost_per_country_overall   = gen_country_losses_allocation_per_country_overall*losses_price*overall_snapshots_weight*0.001
+                    dem_country_losses_allocation_cost_per_country_overall   = dem_country_losses_allocation_per_country_overall*losses_price*overall_snapshots_weight*0.001
                     country_losses_allocation_cost_per_country_overall       = dem_country_losses_allocation_cost_per_country_overall + gen_country_losses_allocation_cost_per_country_overall
                     if category_aggregation:
-                        gen_country_losses_allocation_cost_per_asset_category_overall    = gen_country_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                        dem_country_losses_allocation_cost_per_asset_category_overall    = dem_country_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                        gen_country_losses_allocation_cost_per_asset_category_overall    = gen_country_losses_allocation_per_asset_category_overall*losses_price*overall_snapshots_weight*0.001
+                        dem_country_losses_allocation_cost_per_asset_category_overall    = dem_country_losses_allocation_per_asset_category_overall*losses_price*overall_snapshots_weight*0.001
                         
             if show_SO_results:
-                gen_SO_losses_allocation_cost_per_asset_overall  = gen_SO_losses_allocation_per_asset_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                dem_SO_losses_allocation_cost_per_asset_overall  = dem_SO_losses_allocation_per_asset_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                gen_SO_losses_allocation_cost_per_asset_overall  = gen_SO_losses_allocation_per_asset_overall*losses_price*overall_snapshots_weight*0.001
+                dem_SO_losses_allocation_cost_per_asset_overall  = dem_SO_losses_allocation_per_asset_overall*losses_price*overall_snapshots_weight*0.001
                 if show_aggregated_results:
-                    gen_SO_losses_allocation_cost_per_SO_overall = gen_SO_losses_allocation_per_SO_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                    dem_SO_losses_allocation_cost_per_SO_overall = dem_SO_losses_allocation_per_SO_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                    gen_SO_losses_allocation_cost_per_SO_overall = gen_SO_losses_allocation_per_SO_overall*losses_price*overall_snapshots_weight*0.001
+                    dem_SO_losses_allocation_cost_per_SO_overall = dem_SO_losses_allocation_per_SO_overall*losses_price*overall_snapshots_weight*0.001
                     SO_losses_allocation_cost_per_SO_overall     = dem_SO_losses_allocation_cost_per_SO_overall + gen_SO_losses_allocation_cost_per_SO_overall
                     if category_aggregation:
-                        gen_SO_losses_allocation_cost_per_asset_category_overall = gen_SO_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
-                        dem_SO_losses_allocation_cost_per_asset_category_overall = dem_SO_losses_allocation_per_asset_category_overall*losses_price*sum(snapshots_weights_dic.values())*0.001
+                        gen_SO_losses_allocation_cost_per_asset_category_overall = gen_SO_losses_allocation_per_asset_category_overall*losses_price*overall_snapshots_weight*0.001
+                        dem_SO_losses_allocation_cost_per_asset_category_overall = dem_SO_losses_allocation_per_asset_category_overall*losses_price*overall_snapshots_weight*0.001
 
     #%% overall intermediary results
     if show_intermediary_results:    
@@ -1547,12 +1645,12 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     gen_agent_flow_km_contribution_per_SO_overall               = np.matmul(gen_agent_flow_km_contribution_per_asset_overall,SOs_lines.to_numpy())
                     dem_agent_flow_km_contribution_per_SO_overall               = np.matmul(dem_agent_flow_km_contribution_per_asset_overall,SOs_lines.to_numpy())
                 if category_aggregation:
-                    gen_agent_flow_km_contribution_per_asset_category_overall   = get_aggregation_per_category(pd.DataFrame(gen_agent_flow_km_contribution_per_asset_overall.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
-                    dem_agent_flow_km_contribution_per_asset_category_overall   = get_aggregation_per_category(pd.DataFrame(dem_agent_flow_km_contribution_per_asset_overall.transpose(), index=lines["Line"], columns=nodes["Node"]), lines_attributes)
+                    gen_agent_flow_km_contribution_per_asset_category_overall   = get_aggregation_per_category(pd.DataFrame(gen_agent_flow_km_contribution_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
+                    dem_agent_flow_km_contribution_per_asset_category_overall   = get_aggregation_per_category(pd.DataFrame(dem_agent_flow_km_contribution_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
             
             if show_country_results:
-                gen_country_flow_km_contribution_per_asset_overall, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_flow_km_contribution_per_asset_overall, nodes, lines, "Country")
-                dem_country_flow_km_contribution_per_asset_overall, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_flow_km_contribution_per_asset_overall, nodes, lines, "Country")
+                gen_country_flow_km_contribution_per_asset_overall, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_flow_km_contribution_per_asset_overall, nodes, lines, "Country", index_column)
+                dem_country_flow_km_contribution_per_asset_overall, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_flow_km_contribution_per_asset_overall, nodes, lines, "Country", index_column)
                 if show_aggregated_results:
                     gen_country_flow_km_contribution_per_country_overall, countries_lines   = get_contribution_per_group(gen_country_flow_km_contribution_per_asset_overall, reactance, length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
                     dem_country_flow_km_contribution_per_country_overall, countries_lines   = get_contribution_per_group(dem_country_flow_km_contribution_per_asset_overall, reactance, length_per_reactance, Ownership_matrix, countries_interconnections, "Country")
@@ -1561,8 +1659,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         dem_country_flow_km_contribution_per_asset_category_overall         = get_aggregation_per_category(dem_country_flow_km_contribution_per_asset_overall, lines_attributes)
             
             if show_SO_results:
-                gen_SO_flow_km_contribution_per_asset_overall, SO_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_km_contribution_per_asset_overall, nodes, lines, "SO 1")
-                dem_SO_flow_km_contribution_per_asset_overall, SO_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_km_contribution_per_asset_overall, nodes, lines, "SO 1")
+                gen_SO_flow_km_contribution_per_asset_overall, SO_nodes_matrix_G = get_contribution_per_asset(gen_agent_flow_km_contribution_per_asset_overall, nodes, lines, "SO 1", index_column)
+                dem_SO_flow_km_contribution_per_asset_overall, SO_nodes_matrix_D = get_contribution_per_asset(dem_agent_flow_km_contribution_per_asset_overall, nodes, lines, "SO 1", index_column)
                 if show_aggregated_results:
                     gen_SO_flow_km_contribution_per_SO_overall,   SOs_lines      = get_contribution_per_group(gen_SO_flow_km_contribution_per_asset_overall, reactance, length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
                     dem_SO_flow_km_contribution_per_SO_overall,   SOs_lines      = get_contribution_per_group(dem_SO_flow_km_contribution_per_asset_overall, reactance, length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
@@ -1579,8 +1677,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                     dem_agent_network_utilization_fraction_overall          = ((dem_agent_utilization_fraction_per_asset_category_overall*cost_per_category.to_numpy().transpose()[:,0]).sum(axis=1)/cost_per_category.sum(axis=1)[0]).to_frame(name='Network Utilization %')
             
             if show_country_results:
-                gen_country_utilization_fraction_per_asset_overall, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_utilization_fraction_per_asset_overall, nodes, lines, "Country")
-                dem_country_utilization_fraction_per_asset_overall, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_utilization_fraction_per_asset_overall, nodes, lines, "Country")
+                gen_country_utilization_fraction_per_asset_overall, country_nodes_matrix_G  = get_contribution_per_asset(gen_agent_utilization_fraction_per_asset_overall, nodes, lines, "Country", index_column)
+                dem_country_utilization_fraction_per_asset_overall, country_nodes_matrix_D  = get_contribution_per_asset(dem_agent_utilization_fraction_per_asset_overall, nodes, lines, "Country", index_column)
                 if show_aggregated_results and category_aggregation and usage_result:
                     gen_country_utilization_fraction_per_asset_category_overall             = get_utilization_per_category(gen_country_flow_km_contribution_per_asset_category_overall, gen_country_flow_contribution_per_asset_category_overall, flow_km_per_category, flow_per_category, asset_type_dic)
                     dem_country_utilization_fraction_per_asset_category_overall             = get_utilization_per_category(dem_country_flow_km_contribution_per_asset_category_overall, dem_country_flow_contribution_per_asset_category_overall, flow_km_per_category, flow_per_category, asset_type_dic)        
@@ -1589,8 +1687,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                         dem_country_network_utilization_fraction_overall                    = ((dem_country_utilization_fraction_per_asset_category_overall*cost_per_category.to_numpy().transpose()[:,0]).sum(axis=1)/cost_per_category.sum(axis=1)[0]).to_frame(name='Network Utilization %')
 
             if show_SO_results:
-                gen_SO_utilization_fraction_per_asset_overall, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_utilization_fraction_per_asset_overall, nodes, lines, "SO 1")
-                dem_SO_utilization_fraction_per_asset_overall, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_utilization_fraction_per_asset_overall, nodes, lines, "SO 1")
+                gen_SO_utilization_fraction_per_asset_overall, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_utilization_fraction_per_asset_overall, nodes, lines, "SO 1", index_column)
+                dem_SO_utilization_fraction_per_asset_overall, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_utilization_fraction_per_asset_overall, nodes, lines, "SO 1", index_column)
                 if show_aggregated_results and category_aggregation and usage_result:
                     gen_SO_utilization_fraction_per_asset_category_overall         = get_utilization_per_category(gen_SO_flow_km_contribution_per_asset_category_overall, gen_SO_flow_contribution_per_asset_category_overall, flow_km_per_category, flow_per_category, asset_type_dic)
                     dem_SO_utilization_fraction_per_asset_category_overall         = get_utilization_per_category(dem_SO_flow_km_contribution_per_asset_category_overall, dem_SO_flow_contribution_per_asset_category_overall, flow_km_per_category, flow_per_category, asset_type_dic)
@@ -1712,46 +1810,46 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
 
     if cost_result:  
         if show_agent_results:
-            print_to_csv(output_file+"Generation agents overall cost per asset", gen_agent_cost_per_asset_overall, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
-            print_to_csv(output_file+"Demand agents overall cost per asset", dem_agent_cost_per_asset_overall, index=nodes["Node"], columns=lines["Line"],total=True, remove_zeros=remove_zero_values)
+            print_to_csv(output_file+"Generation agents overall network usage cost per asset", gen_agent_cost_per_asset_overall, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
+            print_to_csv(output_file+"Demand agents overall network usage cost per asset", dem_agent_cost_per_asset_overall, index=nodes["Node"], columns=lines["Line"],total=True, remove_zeros=remove_zero_values)
             if not is_all_ND_zeros:
-                remove_zero_rows_and_columns(negative_dem_agent_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Negative demand agents overall cost per asset.csv")
+                remove_zero_rows_and_columns(negative_dem_agent_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Negative demand agents overall network usage cost per asset.csv")
             if cost_of_unused_capacity_op:
-                print_to_csv(output_file+"Generation agents socialized cost per asset", gen_agent_socialized_cost_per_asset_overall, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
-                print_to_csv(output_file+"Demand agents socialized cost per asset", dem_agent_socialized_cost_per_asset_overall, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
+                print_to_csv(output_file+"Generation agents socialized network usage cost per asset", gen_agent_socialized_cost_per_asset_overall, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
+                print_to_csv(output_file+"Demand agents socialized network usage cost per asset", dem_agent_socialized_cost_per_asset_overall, index=nodes["Node"], columns=lines["Line"], total=True, remove_zeros=remove_zero_values)
             if show_aggregated_results:
-                print_to_csv(output_file+"Generation agents overall cost per country", gen_agent_cost_per_country_overall, index=nodes["Node"], columns=countries_lines.columns, total=False, remove_zeros=remove_zero_values)
-                print_to_csv(output_file+"Demand agents overall cost per country", dem_agent_cost_per_country_overall, index=nodes["Node"], columns=countries_lines.columns, total=False, remove_zeros=remove_zero_values)
-                print_to_csv(output_file+"Generation agents overall total cost", gen_agent_total_cost_overall, index=nodes["Node"], columns=['Total cost KUS$'], total=True, remove_zeros=remove_zero_values)
-                print_to_csv(output_file+"Demand agents overall total cost", dem_agent_total_cost_overall, index=nodes["Node"], columns=['Total cost KUS$'], total=True, remove_zeros=remove_zero_values)
+                print_to_csv(output_file+"Generation agents overall network usage cost per country", gen_agent_cost_per_country_overall, index=nodes["Node"], columns=countries_lines.columns, total=False, remove_zeros=remove_zero_values)
+                print_to_csv(output_file+"Demand agents overall network usage cost per country", dem_agent_cost_per_country_overall, index=nodes["Node"], columns=countries_lines.columns, total=False, remove_zeros=remove_zero_values)
+                print_to_csv(output_file+"Generation agents overall network usage total cost", gen_agent_total_cost_overall, index=nodes["Node"], columns=['Total cost KUS$'], total=True, remove_zeros=remove_zero_values)
+                print_to_csv(output_file+"Demand agents overall network usage total cost", dem_agent_total_cost_overall, index=nodes["Node"], columns=['Total cost KUS$'], total=True, remove_zeros=remove_zero_values)
                 if SO_aggregation:
-                    print_to_csv(output_file+"Generation agents overall cost per SO", gen_agent_cost_per_SO_overall, index=nodes["Node"], columns=SOs_lines.columns, total=False, remove_zeros=remove_zero_values)
-                    print_to_csv(output_file+"Demand agents overall cost per SO", dem_agent_cost_per_SO_overall, index=nodes["Node"], columns=SOs_lines.columns, total=False, remove_zeros=remove_zero_values)
+                    print_to_csv(output_file+"Generation agents overall network usage cost per SO", gen_agent_cost_per_SO_overall, index=nodes["Node"], columns=SOs_lines.columns, total=False, remove_zeros=remove_zero_values)
+                    print_to_csv(output_file+"Demand agents overall network usage cost per SO", dem_agent_cost_per_SO_overall, index=nodes["Node"], columns=SOs_lines.columns, total=False, remove_zeros=remove_zero_values)
                 if category_aggregation:
-                    remove_zero_rows_and_columns(gen_agent_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Generation agents overall cost per asset category.csv")
-                    remove_zero_rows_and_columns(dem_agent_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Demand agents overall cost per asset category.csv")
+                    remove_zero_rows_and_columns(gen_agent_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Generation agents overall network usage cost per asset category.csv")
+                    remove_zero_rows_and_columns(dem_agent_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Demand agents overall network usage cost per asset category.csv")
 
         if show_country_results:
-            remove_zero_rows_and_columns(gen_country_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall cost per asset"+".csv")
-            remove_zero_rows_and_columns(dem_country_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall cost per asset"+".csv")
+            remove_zero_rows_and_columns(gen_country_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall network usage cost per asset"+".csv")
+            remove_zero_rows_and_columns(dem_country_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall network usage cost per asset"+".csv")
             if show_aggregated_results:
-                remove_zero_rows_and_columns(gen_country_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall cost per country.csv")
-                remove_zero_rows_and_columns(dem_country_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall cost per country.csv")
-                remove_zero_rows_and_columns(country_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country joint overall cost per country.csv")
+                remove_zero_rows_and_columns(gen_country_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall network usage cost per country.csv")
+                remove_zero_rows_and_columns(dem_country_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall network usage cost per country.csv")
+                remove_zero_rows_and_columns(country_cost_per_country_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"Country joint overall network usage cost per country.csv")
                 if category_aggregation:
-                    remove_zero_rows_and_columns(gen_country_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall cost per asset category.csv")
-                    remove_zero_rows_and_columns(dem_country_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall cost per asset category.csv")
+                    remove_zero_rows_and_columns(gen_country_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country generation overall network usage cost per asset category.csv")
+                    remove_zero_rows_and_columns(dem_country_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"Country demand overall network usage cost per asset category.csv")
 
         if show_SO_results:
-            remove_zero_rows_and_columns(gen_SO_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall cost per asset.csv")
-            remove_zero_rows_and_columns(dem_SO_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall cost per asset.csv")    
+            remove_zero_rows_and_columns(gen_SO_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall network usage cost per asset.csv")
+            remove_zero_rows_and_columns(dem_SO_cost_per_asset_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall network usage cost per asset.csv")    
             if show_aggregated_results:
-                remove_zero_rows_and_columns(gen_SO_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall cost per SO.csv")
-                remove_zero_rows_and_columns(dem_SO_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall cost per SO.csv")
-                remove_zero_rows_and_columns(SO_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO joint overall cost per SO.csv")
+                remove_zero_rows_and_columns(gen_SO_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall network usage cost per SO.csv")
+                remove_zero_rows_and_columns(dem_SO_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall network usage cost per SO.csv")
+                remove_zero_rows_and_columns(SO_cost_per_SO_overall.transpose(), remove_zero_values, remove_zero_values).to_csv(output_file+"SO joint overall network usage cost per SO.csv")
                 if category_aggregation:
-                    remove_zero_rows_and_columns(gen_SO_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall cost per asset category.csv")
-                    remove_zero_rows_and_columns(dem_SO_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall cost per asset category.csv")
+                    remove_zero_rows_and_columns(gen_SO_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO generation overall network usage cost per asset category.csv")
+                    remove_zero_rows_and_columns(dem_SO_cost_per_asset_category_overall, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand overall network usage cost per asset category.csv")
     
     # other intermediary results
     if show_intermediary_results:
