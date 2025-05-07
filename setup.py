@@ -17,7 +17,7 @@ print(logo)
 
 setup(
     name='InfraFair',
-    version='1.2.1',    
+    version='1.3.0',    
     description='A modelling tool for infrastructure cost allocation',
     url='https://github.com/IIT-EnergySystemModels/InfraFair',
     author='Mohamed A.Eltahir Elabbas',
