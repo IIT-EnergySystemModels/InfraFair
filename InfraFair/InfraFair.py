@@ -262,14 +262,13 @@ def get_input_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, a
     interconnections_C  = pd.DataFrame(columns=["Line","Country 1", "Country 2", "Flow"])   # Interconnection matrix between countries
     interconnections_T  = pd.DataFrame(columns=["Line","SO 1", "SO 2", "Flow"])             # Interconnection matrix between SOs
     ownership           = pd.DataFrame(lines_matrix["Line"],index = lines_matrix.index)
-
     if reactance:
         react = attribute_matrix["React"].to_numpy().tolist()  # The reactance matrix
     else:
         react = []
-
-    flows_matrix                    = np.zeros((nodes_matrix.shape[0], nodes_matrix.shape[0]))  # Flow matrix that shows the inflows (negative) and outflows (positive) of each node
-    ownership["Country 1"]          = ownership["Country 2"] = ""
+    flows_matrix                        = np.zeros((nodes_matrix.shape[0], nodes_matrix.shape[0]))  # Flow matrix that shows the inflows (negative) and outflows (positive) of each node
+    ownership["Country 1"]              = ownership["Country 2"]            = ""
+    ownership["Country 1 Ownership"]    = ownership["Country 2 Ownership"]  = 0.0
     if process_line_ownership and SO_owner:
         ownership["SO Owner 1"]     = ownership["SO Owner 2"]      = ""
         ownership["SO 1 Ownership"] = ownership["SO 2 Ownership"]  = 0.0
@@ -279,7 +278,6 @@ def get_input_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, a
         node1, node2 =  int(node1), int(node2)
         flows_matrix[get_node_index(node1, nodes_matrix) - 1, get_node_index(node2, nodes_matrix) - 1] += lines_matrix["Flow"][index]
         flows_matrix[get_node_index(node2, nodes_matrix) - 1, get_node_index(node1, nodes_matrix) - 1] -= lines_matrix["Flow"][index]
-
         # extracting interconnections and ownership
         country1                        = get_node_owner(node1, nodes_matrix, "Country")
         country2                        = get_node_owner(node2, nodes_matrix, "Country")
@@ -287,6 +285,11 @@ def get_input_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, a
         ownership["Country 2"][index]   = country2
         if country1 != country2:
             interconnections_C = pd.concat([interconnections_C, pd.DataFrame.from_records([{"Line": lines_matrix["Line"][index], "Country 1": country1, "Country 2": country2, "Flow": lines_matrix["Flow"][index]}], index =[index])]) #updated for pandas 2.2
+            ownership["Country 1 Ownership"][index] = 0.5
+            ownership["Country 2 Ownership"][index] = 0.5
+        else:
+            ownership["Country 1 Ownership"][index] = 1
+            ownership["Country 2 Ownership"][index] = 0
         if SO_owner:
             L_SO1, L_SO2           = get_line_SOs(lines_matrix["Line"][index],attribute_matrix, nodes_matrix,attribute_dic)
             if L_SO1 != L_SO2 and isinstance(L_SO2,str):
@@ -298,6 +301,7 @@ def get_input_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, a
                 ownership["SO Owner 2"][index]     = L_SO1
             if L_SO1 == L_SO2 or isinstance(L_SO2,float):
                 ownership["SO 1 Ownership"][index] = 1
+                ownership["SO 2 Ownership"][index] = 0
             else:
                 ownership["SO 1 Ownership"][index] = 0.5
                 ownership["SO 2 Ownership"][index] = 0.5
@@ -393,7 +397,7 @@ def get_pin_pd_matrices(lines_matrix: pd.DataFrame, nodes_matrix: pd.DataFrame, 
 
 
 def get_contribution_per_asset(contribution_matrix: np.ndarray, nodes_matrix: pd.DataFrame, lines_matrix: pd.DataFrame, grouping: str, index_name:str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    "This function aggregates the contribution of a group, countries, SOs or even zones"
+    "This function aggregates the contribution of a group of agents, such as countries, SOs or even zones, per network asset"
 
     groups               = Counter(nodes_matrix[grouping])  # type: Collection.Counters
     groups_contribution  = pd.DataFrame(index = lines_matrix[index_name])
@@ -409,10 +413,11 @@ def get_contribution_per_asset(contribution_matrix: np.ndarray, nodes_matrix: pd
 
 
 def get_contribution_per_group(contribution_by_group_matrix: pd.DataFrame, reactance: list, factor: float, Ownership_DF: pd.DataFrame, group_interconnections: pd.DataFrame, grouping: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    "This function calculates the contribution of each group, countries or SOs or even zones, per group"
+    "This function calculates the contribution of each group of agents, such as countries, SOs or even zones, per group of network assets"
 
     intermediate_matrix1    = pd.DataFrame(index=contribution_by_group_matrix.index)
     Line_country_owner      = pd.DataFrame(0.0, index=Ownership_DF.index, columns=contribution_by_group_matrix.columns)
+    diff_owner_line_indices = Ownership_DF.index[Ownership_DF[grouping+" 1"] != Ownership_DF[grouping+" 2"]].tolist()
 
     for group in contribution_by_group_matrix:
         if len(reactance) > 0:
@@ -420,12 +425,19 @@ def get_contribution_per_group(contribution_by_group_matrix: pd.DataFrame, react
         else:
             intermediate_matrix1[group] = contribution_by_group_matrix[group]
 
-        country_line_indices                                        = Ownership_DF.index[Ownership_DF[grouping+" 1"] == group].tolist()
-        Line_country_owner[group][country_line_indices]             = 1
-        country_line_indices                                        = Ownership_DF.index[Ownership_DF[grouping+" 2"] == group].tolist()
-        Line_country_owner[group][country_line_indices]             = 1
-        Line_country_owner[group][group_interconnections.index]     *= 0.5  
+        country_line_indices                                        = Ownership_DF.index[Ownership_DF[grouping+" 1"] == group].tolist()        
+        if grouping == "Country" or grouping == "Zone":
+            Line_country_owner[group][country_line_indices]         = 1
+        else:
+            Line_country_owner.loc[country_line_indices, group]     = Ownership_DF.loc[country_line_indices,"SO 1 Ownership"]
 
+        country_line_indices                                        = Ownership_DF[(Ownership_DF[grouping+" 2"] == group) & (Ownership_DF.index.isin(diff_owner_line_indices))].index.tolist()
+        if grouping == "Country":
+            Line_country_owner[group][country_line_indices]         = 1
+            Line_country_owner[group][group_interconnections.index] *= 0.5  
+        else:
+            Line_country_owner.loc[country_line_indices, group]     = Ownership_DF.loc[country_line_indices,"SO 2 Ownership"]
+            
     countries_responsibility_matrix                     = pd.DataFrame(np.matmul(intermediate_matrix1.to_numpy().transpose(),Line_country_owner.to_numpy()), index=contribution_by_group_matrix.columns, columns=contribution_by_group_matrix.columns)
     diagonal                                            = np.diag(countries_responsibility_matrix)
     use_of                                              = countries_responsibility_matrix.sum(axis=1) - diagonal
@@ -671,6 +683,9 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     modified_generation_overall                     = np.zeros((nodes_sn.shape[0],1))
     positive_demand_overall                         = np.zeros((nodes_sn.shape[0],1))
     negative_demand_overall                         = np.zeros((nodes_sn.shape[0],1))
+    if losses_allocation_results:
+        gen_agent_losses_allocation_per_asset_overall   = np.zeros((int(nodes_sn.shape[0]),lines_sn.shape[0]))
+        dem_agent_losses_allocation_per_asset_overall   = np.zeros((int(nodes_sn.shape[0]),lines_sn.shape[0]))
 
     #%% processing input data and basic results per snapshot
     for snapshot in range(1,n_snapshots+1):
@@ -724,7 +739,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             Ownership_matrix["SO Owner 2"]     = lines_attributes["SO Owner 2"] 
             Ownership_matrix["SO 1 Ownership"] = lines_attributes["SO 1 Ownership"]
             Ownership_matrix["SO 2 Ownership"] = lines_attributes["SO 2 Ownership"]
-
+        
         Pout, PG    = get_pout_pg_matrices(lines, nodes, get_total_nodal_flows(flows, modified_generation, np.zeros(modified_generation.shape)),modified_generation)
         Pin, PD     = get_pin_pd_matrices(lines, nodes, get_total_nodal_flows(flows, np.zeros(positive_demand.shape), positive_demand), positive_demand)
 
@@ -759,7 +774,6 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             y, SO_nodes_matrix_G   = get_contribution_per_asset(gen_agent_flow_contribution_per_asset, nodes, lines, "SO 1", index_column)
             y, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "SO 1", index_column)
             y,   SOs_lines         = get_contribution_per_group(y, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
-    
 
         #%% calculating intermediary results per snapshot
         if show_snapshot_results:
@@ -890,20 +904,24 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                             dem_SO_utilization_fraction_per_asset_category        = get_utilization_per_category(dem_SO_flow_km_contribution_per_asset_category, dem_SO_flow_contribution_per_asset_category, flow_km_per_category, flow_per_category, asset_type_dic)
             #%% losses allocation
             if losses_allocation_results:
-                gen_agent_losses_allocation_per_asset        = line_losses[:,0]*gen_agent_flow_contribution_per_asset/line_flow[:,0]
-                dem_agent_losses_allocation_per_asset        = line_losses[:,0]*dem_agent_flow_contribution_per_asset/line_flow[:,0]
+                gen_agent_losses_allocation_per_asset           = line_losses[:,0]*gen_agent_flow_contribution_per_asset/line_flow[:,0]
+                dem_agent_losses_allocation_per_asset           = line_losses[:,0]*dem_agent_flow_contribution_per_asset/line_flow[:,0]
                 
                 if regional_losses:
-                    gen_agent_losses_allocation_per_asset   = regional_assets[:,0]*gen_agent_losses_allocation_per_asset
-                    dem_agent_losses_allocation_per_asset   = regional_assets[:,0]*dem_agent_losses_allocation_per_asset
+                    gen_agent_losses_allocation_per_asset       = regional_assets[:,0]*gen_agent_losses_allocation_per_asset
+                    dem_agent_losses_allocation_per_asset       = regional_assets[:,0]*dem_agent_losses_allocation_per_asset
 
                 gen_agent_losses_allocation_per_asset[np.isnan(gen_agent_losses_allocation_per_asset)]    = 0
                 dem_agent_losses_allocation_per_asset[np.isnan(dem_agent_losses_allocation_per_asset)]    = 0
                 gen_agent_losses_allocation_per_asset[np.isinf(gen_agent_losses_allocation_per_asset)]    = 0
                 dem_agent_losses_allocation_per_asset[np.isinf(dem_agent_losses_allocation_per_asset)]    = 0      
                 
-                gen_agent_losses_allocation_per_asset       = gen_agent_losses_allocation_per_asset*generation_losses_weight
-                dem_agent_losses_allocation_per_asset       = dem_agent_losses_allocation_per_asset*demand_losses_weight
+                gen_agent_losses_allocation_per_asset           = gen_agent_losses_allocation_per_asset*generation_losses_weight
+                dem_agent_losses_allocation_per_asset           = dem_agent_losses_allocation_per_asset*demand_losses_weight
+                
+                # total losses allocation weighted per snapshot hours
+                gen_agent_losses_allocation_per_asset_overall   += gen_agent_losses_allocation_per_asset*snapshots_weights_dic[snapshot]
+                dem_agent_losses_allocation_per_asset_overall   += dem_agent_losses_allocation_per_asset*snapshots_weights_dic[snapshot]
 
                 if show_agent_results and show_aggregated_results:
                     gen_agent_losses_allocation_per_country = np.matmul(gen_agent_losses_allocation_per_asset,countries_lines.to_numpy())
@@ -1358,6 +1376,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     is_all_ND_zeros                                 = np.all(negative_demand_overall == 0)
     gen_agent_flow_contribution_per_asset_overall   = gen_agent_flow_contribution_per_asset_overall/overall_snapshots_weight
     dem_agent_flow_contribution_per_asset_overall   = dem_agent_flow_contribution_per_asset_overall/overall_snapshots_weight
+    gen_agent_losses_allocation_per_asset_overall   = gen_agent_losses_allocation_per_asset_overall/overall_snapshots_weight
+    dem_agent_losses_allocation_per_asset_overall   = dem_agent_losses_allocation_per_asset_overall/overall_snapshots_weight
     
     if not is_all_ND_zeros:
         negative_dem_agent_contribution_per_asset_overall   = get_negative_demand_contribution(negative_demand_overall, generation_overall, gen_agent_flow_contribution_per_asset_overall, nodes_sn, lines_sn)
@@ -1546,21 +1566,6 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 dem_agent_cost_per_asset_category_overall               = get_aggregation_per_category(pd.DataFrame(dem_agent_cost_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
 
     if losses_allocation_results:
-        gen_agent_losses_allocation_per_asset_overall   = line_losses_overall[:,0]*gen_agent_flow_contribution_per_asset_overall/line_flow_overall[:,0]
-        dem_agent_losses_allocation_per_asset_overall   = line_losses_overall[:,0]*dem_agent_flow_contribution_per_asset_overall/line_flow_overall[:,0]
-        
-        if regional_losses:
-            gen_agent_losses_allocation_per_asset_overall   = regional_assets[:,0]*gen_agent_losses_allocation_per_asset_overall
-            dem_agent_losses_allocation_per_asset_overall   = regional_assets[:,0]*dem_agent_losses_allocation_per_asset_overall
-
-        gen_agent_losses_allocation_per_asset_overall[np.isnan(gen_agent_losses_allocation_per_asset_overall)]    = 0
-        dem_agent_losses_allocation_per_asset_overall[np.isnan(dem_agent_losses_allocation_per_asset_overall)]    = 0
-        gen_agent_losses_allocation_per_asset_overall[np.isinf(gen_agent_losses_allocation_per_asset_overall)]    = 0
-        dem_agent_losses_allocation_per_asset_overall[np.isinf(dem_agent_losses_allocation_per_asset_overall)]    = 0     
-
-        gen_agent_losses_allocation_per_asset_overall   = gen_agent_losses_allocation_per_asset_overall*generation_losses_weight 
-        dem_agent_losses_allocation_per_asset_overall   = dem_agent_losses_allocation_per_asset_overall*demand_losses_weight
-
         if show_agent_results and show_aggregated_results:
             gen_agent_losses_allocation_per_country_overall = np.matmul(gen_agent_losses_allocation_per_asset_overall,countries_lines.to_numpy())
             dem_agent_losses_allocation_per_country_overall = np.matmul(dem_agent_losses_allocation_per_asset_overall,countries_lines.to_numpy())
