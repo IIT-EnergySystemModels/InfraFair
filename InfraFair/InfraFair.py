@@ -751,7 +751,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
         gen_agent_flow_contribution_per_asset           = (AG * modified_generation[:, 0]).transpose()
         dem_agent_flow_contribution_per_asset           = (AD * positive_demand[:, 0]).transpose()
 
-        # place holder for average result calculation
+        # place holder for average overall result calculation
         gen_agent_flow_contribution_per_asset_overall   += gen_agent_flow_contribution_per_asset*snapshots_weights_dic[snapshot]
         dem_agent_flow_contribution_per_asset_overall   += dem_agent_flow_contribution_per_asset*snapshots_weights_dic[snapshot]
         generation_overall                              += generation*snapshots_weights_dic[snapshot]
@@ -775,7 +775,28 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
             y, SO_nodes_matrix_D   = get_contribution_per_asset(dem_agent_flow_contribution_per_asset, nodes, lines, "SO 1", index_column)
             y,   SOs_lines         = get_contribution_per_group(y, [], length_per_reactance, Ownership_matrix, SOs_interconnections, "SO Owner")
 
-        #%% calculating intermediary results per snapshot
+        # calculating the overall losses results
+        if losses_allocation_results:
+            gen_agent_losses_allocation_per_asset           = line_losses[:,0]*gen_agent_flow_contribution_per_asset/line_flow[:,0]
+            dem_agent_losses_allocation_per_asset           = line_losses[:,0]*dem_agent_flow_contribution_per_asset/line_flow[:,0]
+            
+            if regional_losses:
+                gen_agent_losses_allocation_per_asset       = regional_assets[:,0]*gen_agent_losses_allocation_per_asset
+                dem_agent_losses_allocation_per_asset       = regional_assets[:,0]*dem_agent_losses_allocation_per_asset
+
+            gen_agent_losses_allocation_per_asset[np.isnan(gen_agent_losses_allocation_per_asset)]    = 0
+            dem_agent_losses_allocation_per_asset[np.isnan(dem_agent_losses_allocation_per_asset)]    = 0
+            gen_agent_losses_allocation_per_asset[np.isinf(gen_agent_losses_allocation_per_asset)]    = 0
+            dem_agent_losses_allocation_per_asset[np.isinf(dem_agent_losses_allocation_per_asset)]    = 0      
+            
+            gen_agent_losses_allocation_per_asset           = gen_agent_losses_allocation_per_asset*generation_losses_weight
+            dem_agent_losses_allocation_per_asset           = dem_agent_losses_allocation_per_asset*demand_losses_weight
+            
+            # total losses allocation weighted per snapshot hours
+            gen_agent_losses_allocation_per_asset_overall   += gen_agent_losses_allocation_per_asset*snapshots_weights_dic[snapshot]
+            dem_agent_losses_allocation_per_asset_overall   += dem_agent_losses_allocation_per_asset*snapshots_weights_dic[snapshot]
+
+        #%% calculating results per snapshot
         if show_snapshot_results:
             if not os.path.exists(output_file):
                 os.makedirs(output_file)
@@ -904,25 +925,6 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                             dem_SO_utilization_fraction_per_asset_category        = get_utilization_per_category(dem_SO_flow_km_contribution_per_asset_category, dem_SO_flow_contribution_per_asset_category, flow_km_per_category, flow_per_category, asset_type_dic)
             #%% losses allocation
             if losses_allocation_results:
-                gen_agent_losses_allocation_per_asset           = line_losses[:,0]*gen_agent_flow_contribution_per_asset/line_flow[:,0]
-                dem_agent_losses_allocation_per_asset           = line_losses[:,0]*dem_agent_flow_contribution_per_asset/line_flow[:,0]
-                
-                if regional_losses:
-                    gen_agent_losses_allocation_per_asset       = regional_assets[:,0]*gen_agent_losses_allocation_per_asset
-                    dem_agent_losses_allocation_per_asset       = regional_assets[:,0]*dem_agent_losses_allocation_per_asset
-
-                gen_agent_losses_allocation_per_asset[np.isnan(gen_agent_losses_allocation_per_asset)]    = 0
-                dem_agent_losses_allocation_per_asset[np.isnan(dem_agent_losses_allocation_per_asset)]    = 0
-                gen_agent_losses_allocation_per_asset[np.isinf(gen_agent_losses_allocation_per_asset)]    = 0
-                dem_agent_losses_allocation_per_asset[np.isinf(dem_agent_losses_allocation_per_asset)]    = 0      
-                
-                gen_agent_losses_allocation_per_asset           = gen_agent_losses_allocation_per_asset*generation_losses_weight
-                dem_agent_losses_allocation_per_asset           = dem_agent_losses_allocation_per_asset*demand_losses_weight
-                
-                # total losses allocation weighted per snapshot hours
-                gen_agent_losses_allocation_per_asset_overall   += gen_agent_losses_allocation_per_asset*snapshots_weights_dic[snapshot]
-                dem_agent_losses_allocation_per_asset_overall   += dem_agent_losses_allocation_per_asset*snapshots_weights_dic[snapshot]
-
                 if show_agent_results and show_aggregated_results:
                     gen_agent_losses_allocation_per_country = np.matmul(gen_agent_losses_allocation_per_asset,countries_lines.to_numpy())
                     dem_agent_losses_allocation_per_country = np.matmul(dem_agent_losses_allocation_per_asset,countries_lines.to_numpy())
