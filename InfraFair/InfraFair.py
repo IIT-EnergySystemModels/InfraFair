@@ -24,6 +24,7 @@ import warnings
 import time
 from typing import Tuple  # For Python 3.8
 import argparse
+import platform
 
 os.system('color')
 warnings.filterwarnings("ignore")
@@ -34,8 +35,9 @@ parser.add_argument('--case',   type=str, default=None)
 parser.add_argument('--dir',    type=str, default=None)
 parser.add_argument('--config', type=str, default=None)
 
+os_name = platform.system()
 DIR     = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..'))
-CASE    = 'Examples\\Simple_ex\\Simple_Example'
+CASE    = os.path.join('Examples','Simple_ex','Simple_Example')
 CONFIGF = 'InfraFair control inputs'
 
 # Thanks to http://patorjk.com/software/taag/
@@ -689,7 +691,10 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
 
     #%% processing input data and basic results per snapshot
     for snapshot in range(1,n_snapshots+1):
-        output_file         = "Scenario " + str(snapshot) +" results\\"
+        if os_name == "Windows":
+            output_file         = "Scenario " + str(snapshot) +" results\\"
+        else:
+            output_file         = "Scenario " + str(snapshot) +" results/"
         output_file         = os.path.join(config_path, output_file)
         current_snapshot    = str(snapshot)
 
@@ -1363,7 +1368,10 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                                 remove_zero_rows_and_columns(dem_SO_network_utilization_fraction, remove_zero_values, remove_zero_values).to_csv(output_file+"SO demand network utilization sn_"+current_snapshot+".csv")
 
     #%% overall results
-    output_file         = "Overall results\\"
+    if os_name == "Windows":
+        output_file         = "Overall results\\"
+    else:    
+        output_file         = "Overall results/"
     output_file         = os.path.join(config_path, output_file)
     if not os.path.exists(output_file):
         os.makedirs(output_file)
@@ -1378,9 +1386,7 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
     is_all_ND_zeros                                 = np.all(negative_demand_overall == 0)
     gen_agent_flow_contribution_per_asset_overall   = gen_agent_flow_contribution_per_asset_overall/overall_snapshots_weight
     dem_agent_flow_contribution_per_asset_overall   = dem_agent_flow_contribution_per_asset_overall/overall_snapshots_weight
-    gen_agent_losses_allocation_per_asset_overall   = gen_agent_losses_allocation_per_asset_overall/overall_snapshots_weight
-    dem_agent_losses_allocation_per_asset_overall   = dem_agent_losses_allocation_per_asset_overall/overall_snapshots_weight
-    
+     
     if not is_all_ND_zeros:
         negative_dem_agent_contribution_per_asset_overall   = get_negative_demand_contribution(negative_demand_overall, generation_overall, gen_agent_flow_contribution_per_asset_overall, nodes_sn, lines_sn)
 
@@ -1568,6 +1574,8 @@ def InfraFair_run(directory_file:str, case_file:str, config_file:str) -> float:
                 dem_agent_cost_per_asset_category_overall               = get_aggregation_per_category(pd.DataFrame(dem_agent_cost_per_asset_overall.transpose(), index=lines[index_column], columns=nodes["Node"]), lines_attributes)
 
     if losses_allocation_results:
+        gen_agent_losses_allocation_per_asset_overall   = gen_agent_losses_allocation_per_asset_overall/overall_snapshots_weight
+        dem_agent_losses_allocation_per_asset_overall   = dem_agent_losses_allocation_per_asset_overall/overall_snapshots_weight
         if show_agent_results and show_aggregated_results:
             gen_agent_losses_allocation_per_country_overall = np.matmul(gen_agent_losses_allocation_per_asset_overall,countries_lines.to_numpy())
             dem_agent_losses_allocation_per_country_overall = np.matmul(dem_agent_losses_allocation_per_asset_overall,countries_lines.to_numpy())
