@@ -9,8 +9,8 @@
 project     = 'InfraFair'
 copyright   = '2023, Universidad Pontificia Comillas'
 author      = 'Mohamed A.Eltahir Elabbas'
-version     = "1.0"
-release     = '1.0.0'
+version     = "1.3"
+release     = '1.3.2'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
